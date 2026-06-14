@@ -1,4 +1,4 @@
-import { getMemberships, addMembership } from '../db/index.js'
+import { getMemberships, addMembership, getUpcomingMemberships } from './db.js'
 import dayjs from 'dayjs'
 
 export async function handleMemberships(bot, msg, session) {
