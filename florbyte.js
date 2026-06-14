@@ -1,5 +1,5 @@
-import { addProspect, updateProspect, getProspects } from '../db/index.js'
-import { transcribeAudio, extractProspectData } from '../ai/index.js'
+import { addProspect, updateProspect, getProspects } from './db.js'
+import { transcribeAudio, extractProspectData } from './ai.js'
 
 const STATUS_LABELS = {
   pendiente: '⏳ Pendiente',
