@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FlorByte Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f7f4;--sidebar:#ffffff;--card:#ffffff;
+  --border:#e8e6df;--text:#1a1916;--text2:#6b6a66;--text3:#9b9a96;
+  --violet:#7c3aed;--violet-light:#f5f3ff;--green:#059669;--red:#dc2626;--amber:#d97706;
+}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px}
+/* Sidebar */
+.sidebar{width:220px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10}
+.sidebar-header{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:15px;font-weight:600;color:var(--text)}
+.sidebar-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
+.nav-section{margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:all .15s;color:var(--text2);font-size:13px;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--bg);color:var(--text)}
+.nav-item.active{background:var(--violet-light);color:var(--violet);font-weight:500}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border)}
+.last-update{font-size:11px;color:var(--text3)}
+/* Main */
+.main{margin-left:220px;flex:1;padding:24px;max-width:1100px}
+.page{display:none}.page.active{display:block}
+.page-title{font-size:18px;font-weight:600;margin-bottom:4px}
+.page-sub{font-size:12px;color:var(--text3);margin-bottom:20px}
+/* Cards */
+.grid{display:grid;gap:14px}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
+.stat-val{font-size:26px;font-weight:600;margin-bottom:2px}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.stat-sub{font-size:12px;color:var(--text2);margin-top:4px}
+/* Table */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)}
+td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#faf9f6}
+/* Badge */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
+.badge-gray{background:#f1f0e8;color:#5f5e5a}
+.badge-green{background:#d1fae5;color:#065f46}
+.badge-amber{background:#fef3c7;color:#92400e}
+.badge-red{background:#fee2e2;color:#991b1b}
+.badge-violet{background:var(--violet-light);color:var(--violet)}
+.badge-blue{background:#dbeafe;color:#1e40af}
+/* Progress bar */
+.progress{height:6px;background:#f1f0e8;border-radius:999px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:999px;background:var(--violet)}
+/* Section title */
+.section-title{font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;margin-top:20px}
+.section-title:first-child{margin-top:0}
+/* Loading */
+.loading{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+/* Alert */
+.alert{background:var(--violet-light);border:1px solid #ddd6fe;border-radius:12px;padding:12px 16px;font-size:13px;color:var(--violet);margin-bottom:16px}
+/* Responsive */
+@media(max-width:900px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.sidebar{display:none}.main{margin-left:0}}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-title">FlorByte</div>
+    <div class="sidebar-sub">Panel personal</div>
+  </div>
+  <div class="sidebar-nav">
+    <button class="nav-item active" onclick="showPage('overview')"><span class="nav-icon">📊</span>Resumen</button>
+    <button class="nav-item" onclick="showPage('banco')"><span class="nav-icon">🏦</span>Banco</button>
+    <button class="nav-item" onclick="showPage('florbyte')"><span class="nav-icon">💼</span>FlorByte</button>
+    <button class="nav-item" onclick="showPage('membresias')"><span class="nav-icon">📦</span>Membresías</button>
+    <button class="nav-item" onclick="showPage('tareas')"><span class="nav-icon">✅</span>Tareas</button>
+    <button class="nav-item" onclick="showPage('proyectos')"><span class="nav-icon">📁</span>Proyectos</button>
+    <button class="nav-item" onclick="showPage('notas')"><span class="nav-icon">📝</span>Notas</button>
+  </div>
+  <div class="sidebar-footer">
+    <div class="last-update" id="lastUpdate">Cargando...</div>
+  </div>
+</nav>
+
+<main class="main">
+
+  <!-- RESUMEN -->
+  <div class="page active" id="page-overview">
+    <div class="page-title">Resumen general</div>
+    <div class="page-sub" id="overview-date">—</div>
+    <div id="overview-content"><div class="loading">Cargando datos...</div></div>
+  </div>
+
+  <!-- BANCO -->
+  <div class="page" id="page-banco">
+    <div class="page-title">🏦 Banco</div>
+    <div class="page-sub">Gastos e ingresos del mes actual</div>
+    <div id="banco-content"><div class="loading">Cargando...</div></div>
+  </div>
+
+  <!-- FLORBYTE -->
+  <div class="page" id="page-florbyte">
+    <div class="page-title">💼 FlorByte — Prospectos</div>
+    <div class="page-sub">Seguimiento de empresas contactadas</div>
+    <div id="florbyte-content"><div class="loading">Cargando...</div></div>
+  </div>
+
+  <!-- MEMBRESÍAS -->
+  <div class="page" id="page-membresias">
+    <div class="page-title">📦 Membresías</div>
+    <div class="page-sub">Suscripciones activas y próximos cobros</div>
+    <div id="membresias-content"><div class="loading">Cargando...</div></div>
+  </div>
+
+  <!-- TAREAS -->
+  <div class="page" id="page-tareas">
+    <div class="page-title">✅ Tareas</div>
+    <div class="page-sub">Pendientes por prioridad</div>
+    <div id="tareas-content"><div class="loading">Cargando...</div></div>
+  </div>
+
+  <!-- PROYECTOS -->
+  <div class="page" id="page-proyectos">
+    <div class="page-title">📁 Proyectos</div>
+    <div class="page-sub">Clientes activos de FlorByte Studio</div>
+    <div id="proyectos-content"><div class="loading">Cargando...</div></div>
+  </div>
+
+  <!-- NOTAS -->
+  <div class="page" id="page-notas">
+    <div class="page-title">📝 Notas</div>
+    <div class="page-sub">Últimas notas registradas</div>
+    <div id="notas-content"><div class="loading">Cargando...</div></div>
+  </div>
+
+</main>
+
+<script>
+let DATA = null
+
+function fmt(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('es-MX', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })
+}
+function fmtDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' })
+}
+function money(n) { return '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits:2, maximumFractionDigits:2 }) }
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
+  document.getElementById('page-' + id).classList.add('active')
+  event.currentTarget.classList.add('active')
+  if (DATA) renderPage(id)
+}
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/dashboard')
+    DATA = await res.json()
+    const now = new Date().toLocaleString('es-MX', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })
+    document.getElementById('lastUpdate').textContent = 'Act: ' + now
+    document.getElementById('overview-date').textContent = new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
+    renderAll()
+  } catch(e) {
+    document.getElementById('overview-content').innerHTML = '<div class="loading">Error al cargar datos. Verifica la conexión.</div>'
+  }
+}
+
+function renderAll() {
+  renderOverview()
+  renderBanco()
+  renderFlorbyte()
+  renderMembresias()
+  renderTareas()
+  renderProyectos()
+  renderNotas()
+}
+
+function renderPage(id) {
+  if (id === 'overview') renderOverview()
+  else if (id === 'banco') renderBanco()
+  else if (id === 'florbyte') renderFlorbyte()
+  else if (id === 'membresias') renderMembresias()
+  else if (id === 'tareas') renderTareas()
+  else if (id === 'proyectos') renderProyectos()
+  else if (id === 'notas') renderNotas()
+}
+
+function renderOverview() {
+  const { banco, florbyte, membresias, tareas, proyectos } = DATA
+  document.getElementById('overview-content').innerHTML = `
+    <div class="grid grid-4" style="margin-bottom:20px">
+      <div class="card"><div class="stat-val" style="color:var(--red)">${money(banco.totalGastos)}</div><div class="stat-label">Gastos del mes</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--green)">${money(banco.totalIngresos)}</div><div class="stat-label">Ingresos del mes</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--violet)">${florbyte.interesados}</div><div class="stat-label">Prospectos interesados</div><div class="stat-sub">${florbyte.total} totales</div></div>
+      <div class="card"><div class="stat-val">${tareas.alta}</div><div class="stat-label">Tareas urgentes</div><div class="stat-sub">${tareas.total} pendientes</div></div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="section-title">🏦 Gastos por tarjeta</div>
+        ${Object.entries(banco.porTarjeta).map(([k,v]) => `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <span style="font-size:13px;font-weight:500">${k}</span>
+            <span style="font-size:13px;color:var(--red)">${money(v.gastos)}</span>
+          </div>
+        `).join('') || '<div style="color:var(--text3);font-size:13px">Sin movimientos</div>'}
+      </div>
+      <div class="card">
+        <div class="section-title">📦 Membresías próximas</div>
+        ${membresias.proximas.map(m => `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div>
+              <div style="font-size:13px;font-weight:500">${m.name}</div>
+              <div style="font-size:11px;color:var(--text3)">En ${m.daysLeft}d — día ${m.billing_day}</div>
+            </div>
+            <span style="font-size:13px">${money(m.amount)}</span>
+          </div>
+        `).join('') || '<div style="color:var(--text3);font-size:13px">Sin cobros próximos</div>'}
+      </div>
+      <div class="card">
+        <div class="section-title">📁 Proyectos activos</div>
+        ${proyectos.lista.slice(0,4).map(p => `
+          <div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:13px;font-weight:500">${p.client_name}</span>
+              <span style="font-size:12px;color:var(--text3)">${p.progress}%</span>
+            </div>
+            <div class="progress"><div class="progress-fill" style="width:${p.progress}%"></div></div>
+          </div>
+        `).join('') || '<div style="color:var(--text3);font-size:13px">Sin proyectos activos</div>'}
+      </div>
+    </div>
+  `
+}
+
+function renderBanco() {
+  const { banco } = DATA
+  const txns = banco.transacciones
+  document.getElementById('banco-content').innerHTML = `
+    <div class="grid grid-3" style="margin-bottom:20px">
+      ${Object.entries(banco.porTarjeta).map(([k,v]) => `
+        <div class="card">
+          <div class="stat-label">${k}</div>
+          <div class="stat-val" style="color:var(--red);margin-top:6px">${money(v.gastos)}</div>
+          <div style="font-size:12px;color:var(--green);margin-top:2px">+${money(v.ingresos)} ingresos</div>
+        </div>
+      `).join('') || '<div class="card"><div style="color:var(--text3)">Sin tarjetas</div></div>'}
+    </div>
+    <div class="card">
+      <div class="section-title">Movimientos del mes</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha y hora</th><th>Descripción</th><th>Tarjeta</th><th>Tipo</th><th>Monto</th></tr></thead>
+          <tbody>
+            ${txns.length ? txns.map(t => `
+              <tr>
+                <td style="color:var(--text3);white-space:nowrap">${fmt(t.created_at)}</td>
+                <td>${t.description || '—'}</td>
+                <td>${t.cards?.bank || '—'}</td>
+                <td><span class="badge ${t.type==='gasto'?'badge-red':'badge-green'}">${t.type}</span></td>
+                <td style="font-weight:500;color:${t.type==='gasto'?'var(--red)':'var(--green)'}">${money(t.amount)}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Sin movimientos este mes</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+function renderFlorbyte() {
+  const { florbyte } = DATA
+  const statusBadge = { pendiente:'badge-gray', interesado:'badge-green', no_interesado:'badge-red', cerrado:'badge-violet' }
+  const statusLabel = { pendiente:'Pendiente', interesado:'Interesado', no_interesado:'No interesado', cerrado:'Cerrado' }
+  document.getElementById('florbyte-content').innerHTML = `
+    <div class="grid grid-4" style="margin-bottom:20px">
+      <div class="card"><div class="stat-val">${florbyte.total}</div><div class="stat-label">Total</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--amber)">${florbyte.pendientes}</div><div class="stat-label">Pendientes</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--green)">${florbyte.interesados}</div><div class="stat-label">Interesados</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--violet)">${florbyte.cerrados}</div><div class="stat-label">Cerrados</div></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Todos los prospectos</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Nombre</th><th>Negocio</th><th>Plataforma</th><th>Industria</th><th>Estado</th></tr></thead>
+          <tbody>
+            ${florbyte.recientes.length ? florbyte.recientes.map(p => `
+              <tr>
+                <td style="color:var(--text3);white-space:nowrap">${fmt(p.created_at)}</td>
+                <td style="font-weight:500">${p.name || '—'}</td>
+                <td>${p.business || '—'}</td>
+                <td>${p.platform || '—'}</td>
+                <td>${p.industry || '—'}</td>
+                <td><span class="badge ${statusBadge[p.status]||'badge-gray'}">${statusLabel[p.status]||p.status}</span></td>
+              </tr>
+            `).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Sin prospectos</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+function renderMembresias() {
+  const { membresias } = DATA
+  document.getElementById('membresias-content').innerHTML = `
+    <div class="grid grid-3" style="margin-bottom:20px">
+      <div class="card"><div class="stat-val">${membresias.total}</div><div class="stat-label">Activas</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--red)">${money(membresias.costoMensual)}</div><div class="stat-label">Costo mensual</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--amber)">${money(membresias.costoMensual * 12)}</div><div class="stat-label">Costo anual</div></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Próximos cobros</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Membresía</th><th>Monto</th><th>Día de cobro</th><th>Días restantes</th><th>Aviso</th></tr></thead>
+          <tbody>
+            ${membresias.proximas.length ? membresias.proximas.map(m => `
+              <tr>
+                <td style="font-weight:500">${m.name}</td>
+                <td>${money(m.amount)} ${m.currency}</td>
+                <td>Día ${m.billing_day}</td>
+                <td><span class="badge ${m.daysLeft<=3?'badge-red':m.daysLeft<=7?'badge-amber':'badge-green'}">${m.daysLeft===0?'Hoy':'En '+m.daysLeft+'d'}</span></td>
+                <td>${m.reminder_days} días antes</td>
+              </tr>
+            `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Sin membresías</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+function renderTareas() {
+  const { tareas } = DATA
+  const priIcon = { alta:'🔴', media:'🟡', baja:'🟢' }
+  document.getElementById('tareas-content').innerHTML = `
+    <div class="grid grid-3" style="margin-bottom:20px">
+      <div class="card"><div class="stat-val" style="color:var(--red)">${tareas.alta}</div><div class="stat-label">Alta prioridad</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--amber)">${tareas.media}</div><div class="stat-label">Media prioridad</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--green)">${tareas.baja}</div><div class="stat-label">Baja prioridad</div></div>
+    </div>
+    <div class="card">
+      <div class="section-title">Tareas pendientes</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Prioridad</th><th>Tarea</th><th>Fecha agregada</th><th>Vencimiento</th></tr></thead>
+          <tbody>
+            ${tareas.lista.length ? tareas.lista.map(t => `
+              <tr>
+                <td>${priIcon[t.priority]} ${t.priority}</td>
+                <td style="font-weight:500">${t.title}</td>
+                <td style="color:var(--text3)">${fmt(t.created_at)}</td>
+                <td style="color:${t.due_date?'var(--amber)':'var(--text3)'}">${t.due_date?fmtDate(t.due_date):'—'}</td>
+              </tr>
+            `).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">¡Sin tareas pendientes! 🎉</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `
+}
+
+function renderProyectos() {
+  const { proyectos } = DATA
+  document.getElementById('proyectos-content').innerHTML = `
+    <div class="card" style="margin-bottom:14px">
+      <div class="stat-val">${proyectos.total}</div>
+      <div class="stat-label">Clientes activos</div>
+    </div>
+    <div class="grid grid-2">
+      ${proyectos.lista.length ? proyectos.lista.map(p => `
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+            <div>
+              <div style="font-size:15px;font-weight:600">${p.client_name}</div>
+              ${p.description?`<div style="font-size:12px;color:var(--text3);margin-top:2px">${p.description}</div>`:''}
+            </div>
+            <span class="badge badge-violet">${p.progress}%</span>
+          </div>
+          <div class="progress"><div class="progress-fill" style="width:${p.progress}%"></div></div>
+          <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--text3)">
+            ${p.budget?`<span>💰 ${money(p.budget)}</span>`:''}
+            ${p.deadline?`<span>📅 ${fmtDate(p.deadline)}</span>`:''}
+            <span>Desde ${fmtDate(p.created_at)}</span>
+          </div>
+        </div>
+      `).join('') : '<div class="card"><div style="color:var(--text3)">Sin proyectos activos</div></div>'}
+    </div>
+  `
+}
+
+function renderNotas() {
+  const { notas } = DATA
+  document.getElementById('notas-content').innerHTML = `
+    <div class="card">
+      <div class="section-title">Notas recientes</div>
+      ${notas.recientes.length ? notas.recientes.map(n => `
+        <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${fmt(n.created_at)}</div>
+          <div style="font-size:13px;line-height:1.5">${n.content}</div>
+          ${n.tags?.length?`<div style="margin-top:6px">${n.tags.map(t=>`<span class="badge badge-gray" style="margin-right:4px">${t}</span>`).join('')}</div>`:''}
+        </div>
+      `).join('') : '<div style="color:var(--text3);font-size:13px;padding:20px 0">Sin notas</div>'}
+    </div>
+  `
+}
+
+loadData()
+setInterval(loadData, 60000) // Actualiza cada minuto
+</script>
+</body>
+</html>
