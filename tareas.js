@@ -1,4 +1,4 @@
-import { addTask, getTasks, completeTask } from '../db/index.js'
+import { addTask, getTasks, completeTask } from './db.js'
 
 const PRIORITY_ICON = { alta: '🔴', media: '🟡', baja: '🟢' }
 const PRIORITY_ORDER = { alta: 0, media: 1, baja: 2 }
