@@ -1,5 +1,5 @@
-import { getCards, addTransaction, getMonthTransactions, addCard } from '../db/index.js'
-import { extractTicketData } from '../ai/index.js'
+import { getCards, addTransaction, getMonthTransactions, addCard } from './db.js'
+import { extractTicketData } from './ai.js'
 import dayjs from 'dayjs'
 
 const PRIORITY_ICON = { alta: '🔴', media: '🟡', baja: '🟢' }
