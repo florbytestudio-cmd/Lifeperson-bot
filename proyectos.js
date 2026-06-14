@@ -1,4 +1,4 @@
-import { getProjects, addProject, updateProject } from '../db/index.js'
+import { getProjects, addProject, updateProject } from './db.js'
 import dayjs from 'dayjs'
 
 const STATUS_ICON = { activo: '🟢', pausado: '🟡', terminado: '✅' }
