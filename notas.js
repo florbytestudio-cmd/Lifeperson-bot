@@ -1,5 +1,5 @@
-import { addNote, searchNotes, getRecentNotes } from '../db/index.js'
-import { transcribeAudio, summarizeSearchResults } from '../ai/index.js'
+import { addNote, searchNotes, getRecentNotes } from './db.js'
+import { transcribeAudio, summarizeSearchResults } from './ai.js'
 
 export async function handleNotas(bot, msg, session) {
   const chatId = msg.chat.id
