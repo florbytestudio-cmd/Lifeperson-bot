@@ -50,7 +50,62 @@ bot.onText(/\/menu/, async (msg) => {
   if (!isAllowed(msg)) return
   await sendMainMenu(msg.chat.id)
 })
+bot.onText(/\/reporte/, async (msg) => {
+  if (!isAllowed(msg)) return
+  const chatId = msg.chat.id
+  await bot.sendMessage(chatId, '📊 Generando reporte...')
 
+  try {
+    const { getDashboardStats } = await import('./db.js')
+    const d = await getDashboardStats()
+    const hoy = new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' })
+
+    let text = `📊 *Reporte diario — ${hoy}*\n\n`
+
+    text += `🏦 *BANCO*\n`
+    text += `💸 Gastos del mes: $${Number(d.banco.totalGastos).toFixed(2)}\n`
+    text += `💰 Ingresos del mes: $${Number(d.banco.totalIngresos).toFixed(2)}\n`
+    Object.entries(d.banco.porTarjeta).forEach(([k,v]) => {
+      text += `  • ${k}: $${Number(v.gastos).toFixed(2)}\n`
+    })
+
+    text += `\n💼 *FLORBYTE*\n`
+    text += `👥 Total prospectos: ${d.florbyte.total}\n`
+    text += `✅ Interesados: ${d.florbyte.interesados}\n`
+    text += `⏳ Pendientes: ${d.florbyte.pendientes}\n`
+    text += `🎉 Cerrados: ${d.florbyte.cerrados}\n`
+
+    text += `\n📦 *MEMBRESÍAS*\n`
+    text += `💳 Costo mensual: $${Number(d.membresias.costoMensual).toFixed(2)}\n`
+    if (d.membresias.proximas.length) {
+      text += `🔔 Próximos cobros:\n`
+      d.membresias.proximas.forEach(m => {
+        text += `  • ${m.name} — $${m.amount} (en ${m.daysLeft}d)\n`
+      })
+    }
+
+    text += `\n✅ *TAREAS PENDIENTES*\n`
+    text += `🔴 Alta: ${d.tareas.alta} · 🟡 Media: ${d.tareas.media} · 🟢 Baja: ${d.tareas.baja}\n`
+    if (d.tareas.alta > 0) {
+      text += `*Urgentes:*\n`
+      d.tareas.lista.filter(t => t.priority === 'alta').slice(0,3).forEach(t => {
+        text += `  • ${t.title}\n`
+      })
+    }
+
+    if (d.proyectos.total > 0) {
+      text += `\n📁 *PROYECTOS ACTIVOS* (${d.proyectos.total})\n`
+      d.proyectos.lista.forEach(p => {
+        const bar = '█'.repeat(Math.round(p.progress/10)) + '░'.repeat(10-Math.round(p.progress/10))
+        text += `  • ${p.client_name}: ${bar} ${p.progress}%\n`
+      })
+    }
+
+    await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' })
+  } catch (err) {
+    await bot.sendMessage(chatId, `Error al generar reporte: ${err.message}`)
+  }
+})
 bot.on('message', async (msg) => {
   if (!isAllowed(msg)) return
   if (!msg.text || msg.text.startsWith('/')) return
