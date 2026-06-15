@@ -5,70 +5,84 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FlorByte Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#f8f7f4;--sidebar:#ffffff;--card:#ffffff;
   --border:#e8e6df;--text:#1a1916;--text2:#6b6a66;--text3:#9b9a96;
-  --violet:#7c3aed;--violet-light:#f5f3ff;--green:#059669;--red:#dc2626;--amber:#d97706;
+  --violet:#7c3aed;--violet-l:#f5f3ff;--green:#059669;--red:#dc2626;--amber:#d97706;--blue:#2563eb;
 }
 body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:14px}
-/* Sidebar */
-.sidebar{width:220px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10}
+.sidebar{width:220px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10;overflow-y:auto}
 .sidebar-header{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
-.sidebar-title{font-size:15px;font-weight:600;color:var(--text)}
+.sidebar-title{font-size:15px;font-weight:700;color:var(--text)}
 .sidebar-sub{font-size:11px;color:var(--text3);margin-top:2px}
-.sidebar-nav{flex:1;padding:12px 8px;overflow-y:auto}
-.nav-section{margin-bottom:4px}
+.sidebar-nav{flex:1;padding:12px 8px}
 .nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:all .15s;color:var(--text2);font-size:13px;border:none;background:none;width:100%;text-align:left}
 .nav-item:hover{background:var(--bg);color:var(--text)}
-.nav-item.active{background:var(--violet-light);color:var(--violet);font-weight:500}
-.nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-item.active{background:var(--violet-l);color:var(--violet);font-weight:500}
 .sidebar-footer{padding:12px 16px;border-top:1px solid var(--border)}
-.last-update{font-size:11px;color:var(--text3)}
-/* Main */
-.main{margin-left:220px;flex:1;padding:24px;max-width:1100px}
+.main{margin-left:220px;flex:1;padding:24px;max-width:1200px}
 .page{display:none}.page.active{display:block}
-.page-title{font-size:18px;font-weight:600;margin-bottom:4px}
-.page-sub{font-size:12px;color:var(--text3);margin-bottom:20px}
-/* Cards */
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:20px;font-weight:700}
+.page-sub{font-size:12px;color:var(--text3);margin-top:2px}
 .grid{display:grid;gap:14px}
 .grid-4{grid-template-columns:repeat(4,1fr)}
 .grid-3{grid-template-columns:repeat(3,1fr)}
 .grid-2{grid-template-columns:repeat(2,1fr)}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px}
-.stat-val{font-size:26px;font-weight:600;margin-bottom:2px}
-.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px}
+.stat-val{font-size:28px;font-weight:700;margin-bottom:2px}
+.stat-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
 .stat-sub{font-size:12px;color:var(--text2);margin-top:4px}
-/* Table */
-.table-wrap{overflow-x:auto}
+.section-title{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px}
+.table-wrap{overflow-x:auto;margin-top:4px}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:8px 12px;font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border)}
+th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);white-space:nowrap}
 td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#faf9f6}
-/* Badge */
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:500}
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:500}
 .badge-gray{background:#f1f0e8;color:#5f5e5a}
 .badge-green{background:#d1fae5;color:#065f46}
 .badge-amber{background:#fef3c7;color:#92400e}
 .badge-red{background:#fee2e2;color:#991b1b}
-.badge-violet{background:var(--violet-light);color:var(--violet)}
+.badge-violet{background:var(--violet-l);color:var(--violet)}
 .badge-blue{background:#dbeafe;color:#1e40af}
-/* Progress bar */
 .progress{height:6px;background:#f1f0e8;border-radius:999px;overflow:hidden;margin-top:6px}
 .progress-fill{height:100%;border-radius:999px;background:var(--violet)}
-/* Section title */
-.section-title{font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;margin-top:20px}
-.section-title:first-child{margin-top:0}
-/* Loading */
-.loading{text-align:center;padding:40px;color:var(--text3);font-size:13px}
-/* Alert */
-.alert{background:var(--violet-light);border:1px solid #ddd6fe;border-radius:12px;padding:12px 16px;font-size:13px;color:var(--violet);margin-bottom:16px}
+.btn{padding:7px 14px;border-radius:10px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;border:none;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--violet);color:#fff}
+.btn-primary:hover{background:#6d28d9}
+.btn-ghost{background:white;border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{background:var(--bg)}
+.btn-danger{background:#fee2e2;color:var(--red);border:1px solid #fecaca}
+.btn-danger:hover{background:#fecaca}
+.btn-sm{padding:4px 10px;font-size:11px}
+.actions{display:flex;gap:6px}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:white;border-radius:20px;padding:24px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:20px}
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.form-input{width:100%;border:1px solid var(--border);border-radius:10px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;transition:border .15s}
+.form-input:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1916;color:white;padding:12px 18px;border-radius:12px;font-size:13px;z-index:200;transform:translateY(100px);opacity:0;transition:all .3s}
+.toast.show{transform:translateY(0);opacity:1}
+/* Chart container */
+.chart-container{position:relative;height:220px}
+/* Empty state */
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
 /* Responsive */
 @media(max-width:900px){.grid-4{grid-template-columns:repeat(2,1fr)}.grid-3{grid-template-columns:1fr 1fr}}
-@media(max-width:600px){.sidebar{display:none}.main{margin-left:0}}
+@media(max-width:600px){.sidebar{display:none}.main{margin-left:0}.grid-4{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -76,19 +90,16 @@ tr:hover td{background:#faf9f6}
 <nav class="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-title">FlorByte</div>
-    <div class="sidebar-sub">Panel personal</div>
+    <div class="sidebar-sub" id="lastUpdate">Cargando...</div>
   </div>
   <div class="sidebar-nav">
-    <button class="nav-item active" onclick="showPage('overview')"><span class="nav-icon">📊</span>Resumen</button>
-    <button class="nav-item" onclick="showPage('banco')"><span class="nav-icon">🏦</span>Banco</button>
-    <button class="nav-item" onclick="showPage('florbyte')"><span class="nav-icon">💼</span>FlorByte</button>
-    <button class="nav-item" onclick="showPage('membresias')"><span class="nav-icon">📦</span>Membresías</button>
-    <button class="nav-item" onclick="showPage('tareas')"><span class="nav-icon">✅</span>Tareas</button>
-    <button class="nav-item" onclick="showPage('proyectos')"><span class="nav-icon">📁</span>Proyectos</button>
-    <button class="nav-item" onclick="showPage('notas')"><span class="nav-icon">📝</span>Notas</button>
-  </div>
-  <div class="sidebar-footer">
-    <div class="last-update" id="lastUpdate">Cargando...</div>
+    <button class="nav-item active" onclick="showPage('overview',this)">📊 Resumen</button>
+    <button class="nav-item" onclick="showPage('banco',this)">🏦 Banco</button>
+    <button class="nav-item" onclick="showPage('florbyte',this)">💼 FlorByte</button>
+    <button class="nav-item" onclick="showPage('membresias',this)">📦 Membresías</button>
+    <button class="nav-item" onclick="showPage('tareas',this)">✅ Tareas</button>
+    <button class="nav-item" onclick="showPage('proyectos',this)">📁 Proyectos</button>
+    <button class="nav-item" onclick="showPage('notas',this)">📝 Notas</button>
   </div>
 </nav>
 
@@ -96,58 +107,105 @@ tr:hover td{background:#faf9f6}
 
   <!-- RESUMEN -->
   <div class="page active" id="page-overview">
-    <div class="page-title">Resumen general</div>
-    <div class="page-sub" id="overview-date">—</div>
-    <div id="overview-content"><div class="loading">Cargando datos...</div></div>
+    <div class="page-header">
+      <div><div class="page-title">Resumen general</div><div class="page-sub" id="overview-date"></div></div>
+      <button class="btn btn-ghost" onclick="loadData()">↻ Actualizar</button>
+    </div>
+    <div id="overview-content"><div class="empty">Cargando datos...</div></div>
   </div>
 
   <!-- BANCO -->
   <div class="page" id="page-banco">
-    <div class="page-title">🏦 Banco</div>
-    <div class="page-sub">Gastos e ingresos del mes actual</div>
-    <div id="banco-content"><div class="loading">Cargando...</div></div>
+    <div class="page-header">
+      <div><div class="page-title">🏦 Banco</div><div class="page-sub">Gastos e ingresos del mes</div></div>
+      <button class="btn btn-primary" onclick="openModal('gasto')">+ Nuevo gasto</button>
+    </div>
+    <div id="banco-content"><div class="empty">Cargando...</div></div>
   </div>
 
   <!-- FLORBYTE -->
   <div class="page" id="page-florbyte">
-    <div class="page-title">💼 FlorByte — Prospectos</div>
-    <div class="page-sub">Seguimiento de empresas contactadas</div>
-    <div id="florbyte-content"><div class="loading">Cargando...</div></div>
+    <div class="page-header">
+      <div><div class="page-title">💼 FlorByte</div><div class="page-sub">Prospectos y seguimiento</div></div>
+    </div>
+    <div id="florbyte-content"><div class="empty">Cargando...</div></div>
   </div>
 
   <!-- MEMBRESÍAS -->
   <div class="page" id="page-membresias">
-    <div class="page-title">📦 Membresías</div>
-    <div class="page-sub">Suscripciones activas y próximos cobros</div>
-    <div id="membresias-content"><div class="loading">Cargando...</div></div>
+    <div class="page-header">
+      <div><div class="page-title">📦 Membresías</div><div class="page-sub">Suscripciones activas</div></div>
+    </div>
+    <div id="membresias-content"><div class="empty">Cargando...</div></div>
   </div>
 
   <!-- TAREAS -->
   <div class="page" id="page-tareas">
-    <div class="page-title">✅ Tareas</div>
-    <div class="page-sub">Pendientes por prioridad</div>
-    <div id="tareas-content"><div class="loading">Cargando...</div></div>
+    <div class="page-header">
+      <div><div class="page-title">✅ Tareas</div><div class="page-sub">Pendientes por prioridad</div></div>
+    </div>
+    <div id="tareas-content"><div class="empty">Cargando...</div></div>
   </div>
 
   <!-- PROYECTOS -->
   <div class="page" id="page-proyectos">
-    <div class="page-title">📁 Proyectos</div>
-    <div class="page-sub">Clientes activos de FlorByte Studio</div>
-    <div id="proyectos-content"><div class="loading">Cargando...</div></div>
+    <div class="page-header">
+      <div><div class="page-title">📁 Proyectos</div><div class="page-sub">Clientes activos</div></div>
+    </div>
+    <div id="proyectos-content"><div class="empty">Cargando...</div></div>
   </div>
 
   <!-- NOTAS -->
   <div class="page" id="page-notas">
-    <div class="page-title">📝 Notas</div>
-    <div class="page-sub">Últimas notas registradas</div>
-    <div id="notas-content"><div class="loading">Cargando...</div></div>
+    <div class="page-header">
+      <div><div class="page-title">📝 Notas</div><div class="page-sub">Últimas notas</div></div>
+    </div>
+    <div id="notas-content"><div class="empty">Cargando...</div></div>
   </div>
 
 </main>
 
+<!-- Modal de gasto -->
+<div class="modal-overlay" id="modal-gasto">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Nuevo gasto</div>
+    <input type="hidden" id="edit-id"/>
+    <div class="form-group">
+      <label class="form-label">Tipo</label>
+      <select class="form-input" id="txn-type">
+        <option value="gasto">💸 Gasto</option>
+        <option value="ingreso">💰 Ingreso</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Monto</label>
+        <input class="form-input" type="number" id="txn-amount" placeholder="0.00"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tarjeta</label>
+        <select class="form-input" id="txn-card"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descripción</label>
+      <input class="form-input" type="text" id="txn-desc" placeholder="Ej. Gasolina, Comida..."/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-gasto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTxn()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
 let DATA = null
+let charts = {}
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('es-MX', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })
@@ -156,16 +214,44 @@ function fmtDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' })
 }
-function money(n) { return '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits:2, maximumFractionDigits:2 }) }
-
-function showPage(id) {
+function money(n) {
+  return '$' + Number(n||0).toLocaleString('es-MX', { minimumFractionDigits:2, maximumFractionDigits:2 })
+}
+function showToast(msg, ok=true) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.style.background = ok ? '#059669' : '#dc2626'
+  t.classList.add('show')
+  setTimeout(() => t.classList.remove('show'), 3000)
+}
+function showPage(id, btn) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'))
   document.getElementById('page-' + id).classList.add('active')
-  event.currentTarget.classList.add('active')
+  if (btn) btn.classList.add('active')
   if (DATA) renderPage(id)
 }
+async function openModal(type, txn=null) {
+  document.getElementById('modal-title').textContent = txn ? 'Editar registro' : 'Nuevo gasto'
+  document.getElementById('edit-id').value = txn?.id || ''
+  document.getElementById('txn-type').value = txn?.type || type || 'gasto'
+  document.getElementById('txn-amount').value = txn?.amount || ''
+  document.getElementById('txn-desc').value = txn?.description || ''
+  // Cargar tarjetas desde API
+  const sel = document.getElementById('txn-card')
+  sel.innerHTML = '<option value="">Cargando...</option>'
+  try {
+    const cards = await fetch('/api/cards').then(r=>r.json())
+    sel.innerHTML = cards.map(c => `<option value="${c.id}">${c.bank}</option>`).join('')
+    if (txn?.card_id) sel.value = txn.card_id
+  } catch { sel.innerHTML = '<option value="">Error</option>' }
+  document.getElementById('modal-gasto').classList.add('open')
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open')
+}
 
+// ── API calls ────────────────────────────────────────────────────────────────
 async function loadData() {
   try {
     const res = await fetch('/api/dashboard')
@@ -175,21 +261,50 @@ async function loadData() {
     document.getElementById('overview-date').textContent = new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long', year:'numeric' })
     renderAll()
   } catch(e) {
-    document.getElementById('overview-content').innerHTML = '<div class="loading">Error al cargar datos. Verifica la conexión.</div>'
+    document.getElementById('overview-content').innerHTML = '<div class="empty">Error al cargar datos.</div>'
   }
 }
 
+async function saveTxn() {
+  const id = document.getElementById('edit-id').value
+  const body = {
+    type: document.getElementById('txn-type').value,
+    amount: parseFloat(document.getElementById('txn-amount').value),
+    description: document.getElementById('txn-desc').value,
+    card_id: document.getElementById('txn-card').value,
+  }
+  if (!body.amount || !body.card_id) return showToast('Llena monto y tarjeta', false)
+  try {
+    const url = id ? `/api/transactions/${id}` : '/api/transactions'
+    const method = id ? 'PATCH' : 'POST'
+    const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+    if (!res.ok) throw new Error()
+    closeModal('modal-gasto')
+    showToast(id ? 'Registro actualizado ✓' : 'Gasto registrado ✓')
+    await loadData()
+  } catch { showToast('Error al guardar', false) }
+}
+
+async function deleteTxn(id) {
+  if (!confirm('¿Eliminar este registro?')) return
+  try {
+    await fetch(`/api/transactions/${id}`, { method: 'DELETE' })
+    showToast('Registro eliminado ✓')
+    await loadData()
+  } catch { showToast('Error al eliminar', false) }
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
 function renderAll() {
-  renderOverview()
-  renderBanco()
-  renderFlorbyte()
-  renderMembresias()
-  renderTareas()
-  renderProyectos()
-  renderNotas()
+  const active = document.querySelector('.page.active')?.id?.replace('page-','')
+  renderPage(active || 'overview')
+  // Pre-render otros en segundo plano
+  setTimeout(() => ['overview','banco','florbyte','membresias','tareas','proyectos','notas']
+    .filter(p => p !== active).forEach(renderPage), 100)
 }
 
 function renderPage(id) {
+  if (!DATA) return
   if (id === 'overview') renderOverview()
   else if (id === 'banco') renderBanco()
   else if (id === 'florbyte') renderFlorbyte()
@@ -199,86 +314,139 @@ function renderPage(id) {
   else if (id === 'notas') renderNotas()
 }
 
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id] }
+}
+
 function renderOverview() {
   const { banco, florbyte, membresias, tareas, proyectos } = DATA
   document.getElementById('overview-content').innerHTML = `
-    <div class="grid grid-4" style="margin-bottom:20px">
+    <div class="grid grid-4" style="margin-bottom:16px">
       <div class="card"><div class="stat-val" style="color:var(--red)">${money(banco.totalGastos)}</div><div class="stat-label">Gastos del mes</div></div>
       <div class="card"><div class="stat-val" style="color:var(--green)">${money(banco.totalIngresos)}</div><div class="stat-label">Ingresos del mes</div></div>
-      <div class="card"><div class="stat-val" style="color:var(--violet)">${florbyte.interesados}</div><div class="stat-label">Prospectos interesados</div><div class="stat-sub">${florbyte.total} totales</div></div>
-      <div class="card"><div class="stat-val">${tareas.alta}</div><div class="stat-label">Tareas urgentes</div><div class="stat-sub">${tareas.total} pendientes</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--violet)">${florbyte.interesados}</div><div class="stat-label">Interesados</div><div class="stat-sub">${florbyte.total} prospectos</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--amber)">${tareas.alta}</div><div class="stat-label">Tareas urgentes</div><div class="stat-sub">${tareas.total} pendientes</div></div>
     </div>
     <div class="grid grid-3">
       <div class="card">
-        <div class="section-title">🏦 Gastos por tarjeta</div>
-        ${Object.entries(banco.porTarjeta).map(([k,v]) => `
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-            <span style="font-size:13px;font-weight:500">${k}</span>
-            <span style="font-size:13px;color:var(--red)">${money(v.gastos)}</span>
-          </div>
-        `).join('') || '<div style="color:var(--text3);font-size:13px">Sin movimientos</div>'}
+        <div class="section-title">Gastos por tarjeta</div>
+        <div class="chart-container"><canvas id="chart-cards"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-title">Prospectos por estado</div>
+        <div class="chart-container"><canvas id="chart-prospects"></canvas></div>
       </div>
       <div class="card">
         <div class="section-title">📦 Membresías próximas</div>
         ${membresias.proximas.map(m => `
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
             <div>
               <div style="font-size:13px;font-weight:500">${m.name}</div>
               <div style="font-size:11px;color:var(--text3)">En ${m.daysLeft}d — día ${m.billing_day}</div>
             </div>
-            <span style="font-size:13px">${money(m.amount)}</span>
+            <span class="badge ${m.daysLeft<=3?'badge-red':m.daysLeft<=7?'badge-amber':'badge-green'}">${money(m.amount)}</span>
           </div>
         `).join('') || '<div style="color:var(--text3);font-size:13px">Sin cobros próximos</div>'}
-      </div>
-      <div class="card">
-        <div class="section-title">📁 Proyectos activos</div>
-        ${proyectos.lista.slice(0,4).map(p => `
-          <div style="margin-bottom:12px">
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-              <span style="font-size:13px;font-weight:500">${p.client_name}</span>
-              <span style="font-size:12px;color:var(--text3)">${p.progress}%</span>
-            </div>
-            <div class="progress"><div class="progress-fill" style="width:${p.progress}%"></div></div>
-          </div>
-        `).join('') || '<div style="color:var(--text3);font-size:13px">Sin proyectos activos</div>'}
+        <div style="padding-top:12px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)">
+          Total mensual: <strong style="color:var(--text)">${money(membresias.costoMensual)}</strong>
+        </div>
       </div>
     </div>
   `
+  // Gráfica tarjetas
+  destroyChart('cards')
+  const cardLabels = Object.keys(banco.porTarjeta)
+  const cardData = cardLabels.map(k => banco.porTarjeta[k].gastos)
+  if (cardLabels.length) {
+    charts['cards'] = new Chart(document.getElementById('chart-cards'), {
+      type: 'doughnut',
+      data: { labels: cardLabels, datasets: [{ data: cardData, backgroundColor: ['#7c3aed','#2563eb','#059669','#d97706'], borderWidth: 0 }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:12 } } } }
+    })
+  }
+  // Gráfica prospectos
+  destroyChart('prospects')
+  const pLabels = ['Pendiente','Interesado','No interesado','Cerrado']
+  const pData = [florbyte.pendientes, florbyte.interesados, florbyte.total - florbyte.pendientes - florbyte.interesados - florbyte.cerrados, florbyte.cerrados]
+  charts['prospects'] = new Chart(document.getElementById('chart-prospects'), {
+    type: 'bar',
+    data: { labels: pLabels, datasets: [{ data: pData, backgroundColor: ['#e5e7eb','#7c3aed','#fee2e2','#d1fae5'], borderRadius: 8, borderWidth: 0 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } }, x:{ grid:{ display:false } } } }
+  })
 }
 
 function renderBanco() {
   const { banco } = DATA
   const txns = banco.transacciones
   document.getElementById('banco-content').innerHTML = `
-    <div class="grid grid-3" style="margin-bottom:20px">
+    <div class="grid grid-3" style="margin-bottom:16px">
       ${Object.entries(banco.porTarjeta).map(([k,v]) => `
         <div class="card">
           <div class="stat-label">${k}</div>
-          <div class="stat-val" style="color:var(--red);margin-top:6px">${money(v.gastos)}</div>
+          <div class="stat-val" style="color:var(--red);margin-top:4px">${money(v.gastos)}</div>
           <div style="font-size:12px;color:var(--green);margin-top:2px">+${money(v.ingresos)} ingresos</div>
         </div>
       `).join('') || '<div class="card"><div style="color:var(--text3)">Sin tarjetas</div></div>'}
     </div>
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="section-title">Gastos por día (este mes)</div>
+        <div class="chart-container"><canvas id="chart-daily"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-title">Gasto vs Ingreso</div>
+        <div class="chart-container"><canvas id="chart-type"></canvas></div>
+      </div>
+    </div>
     <div class="card">
-      <div class="section-title">Movimientos del mes</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-title" style="margin:0">Movimientos del mes</div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('gasto')">+ Agregar</button>
+      </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Fecha y hora</th><th>Descripción</th><th>Tarjeta</th><th>Tipo</th><th>Monto</th></tr></thead>
+          <thead><tr><th>Fecha y hora</th><th>Descripción</th><th>Tarjeta</th><th>Tipo</th><th>Monto</th><th>Acciones</th></tr></thead>
           <tbody>
             ${txns.length ? txns.map(t => `
               <tr>
-                <td style="color:var(--text3);white-space:nowrap">${fmt(t.created_at)}</td>
-                <td>${t.description || '—'}</td>
+                <td style="color:var(--text3);white-space:nowrap;font-size:12px">${fmt(t.created_at)}</td>
+                <td style="font-weight:500">${t.description || '—'}</td>
                 <td>${t.cards?.bank || '—'}</td>
                 <td><span class="badge ${t.type==='gasto'?'badge-red':'badge-green'}">${t.type}</span></td>
-                <td style="font-weight:500;color:${t.type==='gasto'?'var(--red)':'var(--green)'}">${money(t.amount)}</td>
+                <td style="font-weight:600;color:${t.type==='gasto'?'var(--red)':'var(--green)'}">${money(t.amount)}</td>
+                <td>
+                  <div class="actions">
+                    <button class="btn btn-ghost btn-sm" onclick='openModal("gasto",${JSON.stringify(t)})'>✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteTxn('${t.id}')">🗑️</button>
+                  </div>
+                </td>
               </tr>
-            `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Sin movimientos este mes</td></tr>'}
+            `).join('') : '<tr><td colspan="6" class="empty">Sin movimientos este mes</td></tr>'}
           </tbody>
         </table>
       </div>
     </div>
   `
+  // Gráfica por día
+  destroyChart('daily')
+  const byDay = {}
+  txns.filter(t=>t.type==='gasto').forEach(t => {
+    const d = new Date(t.created_at).getDate()
+    byDay[d] = (byDay[d]||0) + Number(t.amount)
+  })
+  const days = Object.keys(byDay).sort((a,b)=>a-b)
+  charts['daily'] = new Chart(document.getElementById('chart-daily'), {
+    type: 'line',
+    data: { labels: days.map(d=>`Día ${d}`), datasets: [{ label:'Gastos', data: days.map(d=>byDay[d]), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.1)', fill:true, tension:.4, pointRadius:4 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true}, x:{grid:{display:false}} } }
+  })
+  // Gráfica tipo
+  destroyChart('type')
+  charts['type'] = new Chart(document.getElementById('chart-type'), {
+    type: 'doughnut',
+    data: { labels:['Gastos','Ingresos'], datasets:[{ data:[banco.totalGastos, banco.totalIngresos], backgroundColor:['#fee2e2','#d1fae5'], borderColor:['#dc2626','#059669'], borderWidth:2 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:16 } } } }
+  })
 }
 
 function renderFlorbyte() {
@@ -286,11 +454,21 @@ function renderFlorbyte() {
   const statusBadge = { pendiente:'badge-gray', interesado:'badge-green', no_interesado:'badge-red', cerrado:'badge-violet' }
   const statusLabel = { pendiente:'Pendiente', interesado:'Interesado', no_interesado:'No interesado', cerrado:'Cerrado' }
   document.getElementById('florbyte-content').innerHTML = `
-    <div class="grid grid-4" style="margin-bottom:20px">
+    <div class="grid grid-4" style="margin-bottom:16px">
       <div class="card"><div class="stat-val">${florbyte.total}</div><div class="stat-label">Total</div></div>
       <div class="card"><div class="stat-val" style="color:var(--amber)">${florbyte.pendientes}</div><div class="stat-label">Pendientes</div></div>
       <div class="card"><div class="stat-val" style="color:var(--green)">${florbyte.interesados}</div><div class="stat-label">Interesados</div></div>
       <div class="card"><div class="stat-val" style="color:var(--violet)">${florbyte.cerrados}</div><div class="stat-label">Cerrados</div></div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="section-title">Embudo de conversión</div>
+        <div class="chart-container"><canvas id="chart-funnel"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-title">Por industria</div>
+        <div class="chart-container"><canvas id="chart-industry"></canvas></div>
+      </div>
     </div>
     <div class="card">
       <div class="section-title">Todos los prospectos</div>
@@ -300,34 +478,48 @@ function renderFlorbyte() {
           <tbody>
             ${florbyte.recientes.length ? florbyte.recientes.map(p => `
               <tr>
-                <td style="color:var(--text3);white-space:nowrap">${fmt(p.created_at)}</td>
-                <td style="font-weight:500">${p.name || '—'}</td>
-                <td>${p.business || '—'}</td>
-                <td>${p.platform || '—'}</td>
-                <td>${p.industry || '—'}</td>
+                <td style="color:var(--text3);white-space:nowrap;font-size:12px">${fmt(p.created_at)}</td>
+                <td style="font-weight:500">${p.name||'—'}</td>
+                <td>${p.business||'—'}</td>
+                <td>${p.platform||'—'}</td>
+                <td>${p.industry||'—'}</td>
                 <td><span class="badge ${statusBadge[p.status]||'badge-gray'}">${statusLabel[p.status]||p.status}</span></td>
               </tr>
-            `).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text3);padding:20px">Sin prospectos</td></tr>'}
+            `).join('') : '<tr><td colspan="6" class="empty">Sin prospectos</td></tr>'}
           </tbody>
         </table>
       </div>
     </div>
   `
+  destroyChart('funnel')
+  charts['funnel'] = new Chart(document.getElementById('chart-funnel'), {
+    type: 'bar',
+    data: { labels:['Pendiente','Interesado','Cerrado'], datasets:[{ data:[florbyte.pendientes, florbyte.interesados, florbyte.cerrados], backgroundColor:['#e5e7eb','#7c3aed','#d1fae5'], borderRadius:8, borderWidth:0 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{stepSize:1}},x:{grid:{display:false}}} }
+  })
+  destroyChart('industry')
+  const indCounts = {}
+  florbyte.recientes.forEach(p => { if(p.industry) indCounts[p.industry]=(indCounts[p.industry]||0)+1 })
+  charts['industry'] = new Chart(document.getElementById('chart-industry'), {
+    type: 'doughnut',
+    data: { labels: Object.keys(indCounts), datasets:[{ data: Object.values(indCounts), backgroundColor:['#7c3aed','#2563eb','#059669','#d97706','#dc2626'], borderWidth:0 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}} }
+  })
 }
 
 function renderMembresias() {
   const { membresias } = DATA
   document.getElementById('membresias-content').innerHTML = `
-    <div class="grid grid-3" style="margin-bottom:20px">
+    <div class="grid grid-3" style="margin-bottom:16px">
       <div class="card"><div class="stat-val">${membresias.total}</div><div class="stat-label">Activas</div></div>
       <div class="card"><div class="stat-val" style="color:var(--red)">${money(membresias.costoMensual)}</div><div class="stat-label">Costo mensual</div></div>
-      <div class="card"><div class="stat-val" style="color:var(--amber)">${money(membresias.costoMensual * 12)}</div><div class="stat-label">Costo anual</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--amber)">${money(membresias.costoMensual*12)}</div><div class="stat-label">Costo anual</div></div>
     </div>
     <div class="card">
       <div class="section-title">Próximos cobros</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Membresía</th><th>Monto</th><th>Día de cobro</th><th>Días restantes</th><th>Aviso</th></tr></thead>
+          <thead><tr><th>Membresía</th><th>Monto</th><th>Día de cobro</th><th>Días restantes</th></tr></thead>
           <tbody>
             ${membresias.proximas.length ? membresias.proximas.map(m => `
               <tr>
@@ -335,9 +527,8 @@ function renderMembresias() {
                 <td>${money(m.amount)} ${m.currency}</td>
                 <td>Día ${m.billing_day}</td>
                 <td><span class="badge ${m.daysLeft<=3?'badge-red':m.daysLeft<=7?'badge-amber':'badge-green'}">${m.daysLeft===0?'Hoy':'En '+m.daysLeft+'d'}</span></td>
-                <td>${m.reminder_days} días antes</td>
               </tr>
-            `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">Sin membresías</td></tr>'}
+            `).join('') : '<tr><td colspan="4" class="empty">Sin membresías</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -349,7 +540,7 @@ function renderTareas() {
   const { tareas } = DATA
   const priIcon = { alta:'🔴', media:'🟡', baja:'🟢' }
   document.getElementById('tareas-content').innerHTML = `
-    <div class="grid grid-3" style="margin-bottom:20px">
+    <div class="grid grid-3" style="margin-bottom:16px">
       <div class="card"><div class="stat-val" style="color:var(--red)">${tareas.alta}</div><div class="stat-label">Alta prioridad</div></div>
       <div class="card"><div class="stat-val" style="color:var(--amber)">${tareas.media}</div><div class="stat-label">Media prioridad</div></div>
       <div class="card"><div class="stat-val" style="color:var(--green)">${tareas.baja}</div><div class="stat-label">Baja prioridad</div></div>
@@ -358,16 +549,16 @@ function renderTareas() {
       <div class="section-title">Tareas pendientes</div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Prioridad</th><th>Tarea</th><th>Fecha agregada</th><th>Vencimiento</th></tr></thead>
+          <thead><tr><th>Prioridad</th><th>Tarea</th><th>Agregada</th><th>Vencimiento</th></tr></thead>
           <tbody>
             ${tareas.lista.length ? tareas.lista.map(t => `
               <tr>
-                <td>${priIcon[t.priority]} ${t.priority}</td>
+                <td>${priIcon[t.priority]} <span style="text-transform:capitalize">${t.priority}</span></td>
                 <td style="font-weight:500">${t.title}</td>
-                <td style="color:var(--text3)">${fmt(t.created_at)}</td>
+                <td style="color:var(--text3);font-size:12px">${fmt(t.created_at)}</td>
                 <td style="color:${t.due_date?'var(--amber)':'var(--text3)'}">${t.due_date?fmtDate(t.due_date):'—'}</td>
               </tr>
-            `).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">¡Sin tareas pendientes! 🎉</td></tr>'}
+            `).join('') : '<tr><td colspan="4" class="empty">¡Sin tareas pendientes! 🎉</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -378,28 +569,27 @@ function renderTareas() {
 function renderProyectos() {
   const { proyectos } = DATA
   document.getElementById('proyectos-content').innerHTML = `
-    <div class="card" style="margin-bottom:14px">
+    <div class="card" style="margin-bottom:16px">
       <div class="stat-val">${proyectos.total}</div>
       <div class="stat-label">Clientes activos</div>
     </div>
     <div class="grid grid-2">
       ${proyectos.lista.length ? proyectos.lista.map(p => `
         <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
             <div>
-              <div style="font-size:15px;font-weight:600">${p.client_name}</div>
+              <div style="font-size:16px;font-weight:700">${p.client_name}</div>
               ${p.description?`<div style="font-size:12px;color:var(--text3);margin-top:2px">${p.description}</div>`:''}
             </div>
-            <span class="badge badge-violet">${p.progress}%</span>
+            <span class="badge badge-violet" style="font-size:14px;font-weight:700">${p.progress}%</span>
           </div>
           <div class="progress"><div class="progress-fill" style="width:${p.progress}%"></div></div>
-          <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--text3)">
+          <div style="display:flex;gap:16px;margin-top:12px;font-size:12px;color:var(--text3)">
             ${p.budget?`<span>💰 ${money(p.budget)}</span>`:''}
             ${p.deadline?`<span>📅 ${fmtDate(p.deadline)}</span>`:''}
-            <span>Desde ${fmtDate(p.created_at)}</span>
           </div>
         </div>
-      `).join('') : '<div class="card"><div style="color:var(--text3)">Sin proyectos activos</div></div>'}
+      `).join('') : '<div class="card empty">Sin proyectos activos</div>'}
     </div>
   `
 }
@@ -410,18 +600,23 @@ function renderNotas() {
     <div class="card">
       <div class="section-title">Notas recientes</div>
       ${notas.recientes.length ? notas.recientes.map(n => `
-        <div style="padding:12px 0;border-bottom:1px solid var(--border)">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${fmt(n.created_at)}</div>
-          <div style="font-size:13px;line-height:1.5">${n.content}</div>
-          ${n.tags?.length?`<div style="margin-top:6px">${n.tags.map(t=>`<span class="badge badge-gray" style="margin-right:4px">${t}</span>`).join('')}</div>`:''}
+        <div style="padding:14px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px">${fmt(n.created_at)}</div>
+          <div style="font-size:13px;line-height:1.6">${n.content}</div>
+          ${n.tags?.length?`<div style="margin-top:8px">${n.tags.map(t=>`<span class="badge badge-gray" style="margin-right:4px">${t}</span>`).join('')}</div>`:''}
         </div>
-      `).join('') : '<div style="color:var(--text3);font-size:13px;padding:20px 0">Sin notas</div>'}
+      `).join('') : '<div class="empty">Sin notas</div>'}
     </div>
   `
 }
 
+// Cerrar modal al clickear fuera
+document.getElementById('modal-gasto').addEventListener('click', function(e) {
+  if (e.target === this) closeModal('modal-gasto')
+})
+
 loadData()
-setInterval(loadData, 60000) // Actualiza cada minuto
+setInterval(loadData, 60000)
 </script>
 </body>
 </html>

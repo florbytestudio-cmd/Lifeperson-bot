@@ -35,8 +35,46 @@ app.get('/api/dashboard', async (req, res) => {
   }
 })
 
-app.get('/', (req, res) => {
-  res.send('🤖 MyBot corriendo. Dashboard en <a href="/dashboard">/dashboard</a>')
+app.get('/', (req, res) => res.redirect('/dashboard'))
+
+// ── CRUD API ────────────────────────────────────────────────────────────────
+app.get('/api/transactions', async (req, res) => {
+  try {
+    const start = new Date(); start.setDate(1); start.setHours(0,0,0,0)
+    const { data } = await supabase.from('transactions')
+      .select('*, cards(bank,label)').gte('created_at', start.toISOString()).order('created_at', { ascending: false })
+    res.json(data || [])
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.post('/api/transactions', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('transactions').insert([req.body]).select('*, cards(bank,label)').single()
+    if (error) throw new Error(error.message)
+    res.json(data)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.patch('/api/transactions/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('transactions').update(req.body).eq('id', req.params.id).select('*, cards(bank,label)').single()
+    if (error) throw new Error(error.message)
+    res.json(data)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.delete('/api/transactions/:id', async (req, res) => {
+  try {
+    await supabase.from('transactions').delete().eq('id', req.params.id)
+    res.json({ ok: true })
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.get('/api/cards', async (req, res) => {
+  try {
+    const { data } = await supabase.from('cards').select('*').eq('active', true).order('bank')
+    res.json(data || [])
+  } catch(e) { res.status(500).json({ error: e.message }) }
 })
 
 app.listen(PORT, () => console.log(`🌐 Dashboard en puerto ${PORT}`))
