@@ -8,7 +8,7 @@ import { handleTareas, handleTareasCallback, handleTaskText } from './tareas.js'
 import { handleNotas, handleNotasCallback, handleNoteText, handleNoteAudio, handleNoteSearch } from './notas.js'
 import { addCategory, getCategories, addCard, getCards, supabase, getDashboardStats } from './db.js'
 import { startScheduler } from './scheduler.js'
-import { transcribeAudio } from './ai.js'
+import { transcribeAudio, extractTransactions } from './ai.js'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
@@ -296,24 +296,45 @@ bot.on('callback_query', async (query) => {
       if (!fileUrl) return bot.sendMessage(chatId, 'No encontré el audio.')
       await bot.sendMessage(chatId, '🎙️ Transcribiendo...')
       const transcript = await transcribeAudio(fileUrl)
-      const match = transcript.match(/(\d+(?:\.\d+)?)/)
-      const amount = match ? parseFloat(match[1]) : null
+      await bot.sendMessage(chatId, `📝 _"${transcript}"_\n\n🤖 Extrayendo transacciones...`, { parse_mode: 'Markdown' })
+
+      const transactions = await extractTransactions(transcript)
       const cards = await getCards()
-      if (amount) {
-        session.pendingTransaction = { type: 'gasto', amount, description: transcript }
+
+      if (!transactions.length) {
+        return bot.sendMessage(chatId, `No detecté transacciones claras.\nEscríbelo manual: \`250 gasolina\``, { parse_mode: 'Markdown' })
+      }
+
+      if (transactions.length === 1) {
+        // Una sola transacción — pedir tarjeta
+        session.pendingTransaction = transactions[0]
         const keyboard = {
           inline_keyboard: [
             ...cards.map(c => [{ text: c.bank, callback_data: `ticket_card_${c.id}` }]),
             [{ text: '❌ Cancelar', callback_data: 'cancel' }]
           ]
         }
+        const icon = transactions[0].type === 'ingreso' ? '💰' : '💸'
         return bot.sendMessage(chatId,
-          `📝 Entendí: *$${amount}*\n"${transcript}"\n\n¿A qué tarjeta?`,
+          `${icon} *$${transactions[0].amount}* — ${transactions[0].description}\n\n¿A qué tarjeta?`,
           { parse_mode: 'Markdown', reply_markup: keyboard }
         )
-      } else {
-        return bot.sendMessage(chatId, `No detecté monto en: "${transcript}"\n\nEscríbelo: \`250 gasolina\``, { parse_mode: 'Markdown' })
       }
+
+      // Múltiples transacciones — mostrar resumen y pedir tarjeta
+      let summary = `✅ Detecté *${transactions.length} transacciones*:\n\n`
+      transactions.forEach((t, i) => {
+        const icon = t.type === 'ingreso' ? '💰' : '💸'
+        summary += `${icon} *$${t.amount}* — ${t.description}\n`
+      })
+      session.pendingMultiTransactions = transactions
+      const keyboard = {
+        inline_keyboard: [
+          ...cards.map(c => [{ text: `Cargar todo a ${c.bank}`, callback_data: `multi_card_${c.id}` }]),
+          [{ text: '❌ Cancelar', callback_data: 'cancel' }]
+        ]
+      }
+      return bot.sendMessage(chatId, summary + '\n¿A qué tarjeta las cargo todas?', { parse_mode: 'Markdown', reply_markup: keyboard })
     }
     if (data === 'audio_prospecto') {
       const { fileUrl } = session.pendingAudio || {}
@@ -343,6 +364,23 @@ bot.on('callback_query', async (query) => {
     if (data.startsWith('txn_del_')) {
       await supabase.from('transactions').delete().eq('id', data.replace('txn_del_', ''))
       return bot.sendMessage(chatId, '✅ Registro eliminado.')
+    }
+    if (data.startsWith('multi_card_')) {
+      const cardId = data.replace('multi_card_', '')
+      const txns = session.pendingMultiTransactions || []
+      session.pendingMultiTransactions = null
+      if (!txns.length) return bot.sendMessage(chatId, 'No hay transacciones pendientes.')
+      let saved = 0
+      for (const t of txns) {
+        await supabase.from('transactions').insert([{ card_id: cardId, amount: t.amount, description: t.description, type: t.type }])
+        saved++
+      }
+      const cards = await getCards()
+      const card = cards.find(c => c.id === cardId)
+      return bot.sendMessage(chatId,
+        `✅ *${saved} transacciones* registradas en *${card?.bank}*`,
+        { parse_mode: 'Markdown' }
+      )
     }
     if (data === 'banco_edit_cards') {
       const cards = await getCards()

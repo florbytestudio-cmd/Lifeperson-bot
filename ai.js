@@ -16,11 +16,47 @@ export async function transcribeAudio(fileUrl) {
   return transcript.text
 }
 
+// Detecta UNA o MÚLTIPLES transacciones en un audio
+export async function extractTransactions(transcript) {
+  const res = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [{
+      role: 'user',
+      content: `Del siguiente texto, extrae TODAS las transacciones financieras mencionadas.
+Puede haber una o varias. Responde SOLO en JSON con esta estructura exacta:
+{
+  "transactions": [
+    {
+      "amount": 300,
+      "description": "monitor",
+      "type": "gasto",
+      "bank_hint": "santander"
+    }
+  ]
+}
+
+Reglas:
+- type debe ser "gasto" o "ingreso"
+- amount debe ser número positivo
+- description debe ser breve (máx 5 palabras)
+- bank_hint es el banco mencionado o null si no se menciona
+- Si no hay transacciones claras, retorna { "transactions": [] }
+
+Texto: "${transcript}"`
+    }],
+    max_tokens: 400,
+    response_format: { type: 'json_object' },
+  })
+  const parsed = JSON.parse(res.choices[0].message.content)
+  return parsed.transactions || []
+}
+
 export async function extractProspectData(transcript) {
   const res = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [{ role: 'user', content: `Del siguiente texto extrae info de un prospecto. Responde SOLO en JSON:\n{"name":"","business":"","platform":"instagram|facebook|otro","profile_url":null,"industry":"restaurante|ropa|belleza|inmobiliaria|otro","notes":""}\n\nTexto: "${transcript}"` }],
-    max_tokens: 300, response_format: { type: 'json_object' },
+    max_tokens: 300,
+    response_format: { type: 'json_object' },
   })
   return JSON.parse(res.choices[0].message.content)
 }
@@ -32,7 +68,8 @@ export async function extractTicketData(imageUrl) {
       { type: 'image_url', image_url: { url: imageUrl, detail: 'low' } },
       { type: 'text', text: 'Analiza este ticket. Responde SOLO en JSON:\n{"amount":0.0,"description":"","bank":null,"card_last4":null,"date":null}' }
     ]}],
-    max_tokens: 200, response_format: { type: 'json_object' },
+    max_tokens: 200,
+    response_format: { type: 'json_object' },
   })
   return JSON.parse(res.choices[0].message.content)
 }
