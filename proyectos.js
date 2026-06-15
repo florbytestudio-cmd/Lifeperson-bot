@@ -1,8 +1,6 @@
 import { getProjects, addProject, updateProject } from './db.js'
 import dayjs from 'dayjs'
 
-const STATUS_ICON = { activo: '🟢', pausado: '🟡', terminado: '✅' }
-
 export async function handleProyectos(bot, msg, session) {
   const chatId = msg.chat.id
   const activos = await getProjects('activo')
@@ -15,8 +13,7 @@ export async function handleProyectos(bot, msg, session) {
     ]
   }
   await bot.sendMessage(chatId, `📁 *Proyectos FlorByte*\n${activos.length} cliente(s) activo(s)`, {
-    parse_mode: 'Markdown',
-    reply_markup: keyboard
+    parse_mode: 'Markdown', reply_markup: keyboard
   })
 }
 
@@ -27,7 +24,6 @@ export async function handleProyectosCallback(bot, query, session) {
   if (query.data === 'proy_ver') {
     const projects = await getProjects('activo')
     if (!projects.length) return bot.sendMessage(chatId, 'No hay proyectos activos.')
-
     let text = '📁 *Clientes activos*\n\n'
     projects.forEach((p, i) => {
       const bar = buildProgressBar(p.progress)
@@ -80,9 +76,7 @@ export async function handleProyectosCallback(bot, query, session) {
     const progress = parseInt(parts[3])
     const status = progress === 100 ? 'terminado' : 'activo'
     await updateProject(id, { progress, status })
-    const msg2 = progress === 100
-      ? `🎉 ¡Proyecto terminado al 100%!`
-      : `✅ Avance actualizado a *${progress}%*`
+    const msg2 = progress === 100 ? `🎉 ¡Proyecto terminado al 100%!` : `✅ Avance actualizado a *${progress}%*`
     return bot.sendMessage(chatId, msg2, { parse_mode: 'Markdown' })
   }
 
@@ -99,13 +93,34 @@ export async function handleProyectosCallback(bot, query, session) {
   }
 }
 
+function parseFechaEspanol(raw) {
+  const meses = {
+    enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6,
+    julio:7, agosto:8, septiembre:9, octubre:10, noviembre:11, diciembre:12
+  }
+  // Acepta: "20 junio", "20 de junio", "20 junio 2025", "20 de junio 2025"
+  const match = raw.match(/(\d{1,2})\s+(?:de\s+)?(\w+)(?:\s+(\d{4}))?/i)
+  if (match) {
+    const dia = match[1].padStart(2, '0')
+    const mesNum = meses[match[2].toLowerCase()]
+    if (mesNum) {
+      const mes = String(mesNum).padStart(2, '0')
+      const anio = match[3] || new Date().getFullYear()
+      return `${anio}-${mes}-${dia}`
+    }
+  }
+  // Intentar formato YYYY-MM-DD directo
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  return null
+}
+
 export async function handleProjectText(bot, msg, session) {
   const chatId = msg.chat.id
 
   if (session.state === 'awaiting_project_name') {
     session.pendingProject = { client_name: msg.text.trim() }
     session.state = 'awaiting_project_desc'
-    return bot.sendMessage(chatId, '¿Qué es el proyecto? (breve descripción, o escribe "skip")')
+    return bot.sendMessage(chatId, '¿Qué es el proyecto? (descripción breve, o "skip")')
   }
 
   if (session.state === 'awaiting_project_desc') {
@@ -120,7 +135,10 @@ export async function handleProjectText(bot, msg, session) {
     const budget = raw.toLowerCase() === 'skip' ? null : parseFloat(raw.replace(/[,$]/g, ''))
     session.pendingProject.budget = budget
     session.state = 'awaiting_project_deadline'
-    return bot.sendMessage(chatId, '¿Cuál es la fecha de entrega?\nEjemplos: `5 de julio`, `15 de agosto 2025`, `2025-12-31` o "skip"', { parse_mode: 'Markdown' })
+    return bot.sendMessage(chatId,
+      '¿Cuál es la fecha de entrega?\nEj: `20 junio`, `20 de julio 2025`, `2025-12-31` o "skip"',
+      { parse_mode: 'Markdown' }
+    )
   }
 
   if (session.state === 'awaiting_project_deadline') {
@@ -128,18 +146,12 @@ export async function handleProjectText(bot, msg, session) {
     let deadline = null
 
     if (raw.toLowerCase() !== 'skip') {
-      const meses = {
-        enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6,
-        julio:7, agosto:8, septiembre:9, octubre:10, noviembre:11, diciembre:12
-      }
-      const matchEs = raw.match(/(\d+)\s+de\s+(\w+)(?:\s+(\d{4}))?/i)
-      if (matchEs) {
-        const dia = matchEs[1].padStart(2, '0')
-        const mes = String(meses[matchEs[2].toLowerCase()] || 1).padStart(2, '0')
-        const anio = matchEs[3] || new Date().getFullYear()
-        deadline = `${anio}-${mes}-${dia}`
-      } else {
-        deadline = raw
+      deadline = parseFechaEspanol(raw)
+      if (!deadline) {
+        return bot.sendMessage(chatId,
+          '⚠️ No entendí la fecha. Intenta así:\n`20 junio`, `5 de agosto 2025`, `2025-12-31` o "skip"',
+          { parse_mode: 'Markdown' }
+        )
       }
     }
 
