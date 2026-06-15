@@ -65,7 +65,6 @@ export async function handleProyectosCallback(bot, query, session) {
   if (query.data.startsWith('proy_sel_')) {
     const id = query.data.replace('proy_sel_', '')
     session.pendingProject = { id }
-    session.state = 'awaiting_project_progress'
     const keyboard = {
       inline_keyboard: [
         [10, 25, 50].map(n => ({ text: `${n}%`, callback_data: `proy_prog_${id}_${n}` })),
@@ -121,17 +120,34 @@ export async function handleProjectText(bot, msg, session) {
     const budget = raw.toLowerCase() === 'skip' ? null : parseFloat(raw.replace(/[,$]/g, ''))
     session.pendingProject.budget = budget
     session.state = 'awaiting_project_deadline'
-    return bot.sendMessage(chatId, '¿Cuál es la fecha de entrega? (ej: 2024-12-31 o "skip")')
+    return bot.sendMessage(chatId, '¿Cuál es la fecha de entrega?\nEjemplos: `5 de julio`, `15 de agosto 2025`, `2025-12-31` o "skip"', { parse_mode: 'Markdown' })
   }
 
   if (session.state === 'awaiting_project_deadline') {
     const raw = msg.text.trim()
-    const deadline = raw.toLowerCase() === 'skip' ? null : raw
+    let deadline = null
+
+    if (raw.toLowerCase() !== 'skip') {
+      const meses = {
+        enero:1, febrero:2, marzo:3, abril:4, mayo:5, junio:6,
+        julio:7, agosto:8, septiembre:9, octubre:10, noviembre:11, diciembre:12
+      }
+      const matchEs = raw.match(/(\d+)\s+de\s+(\w+)(?:\s+(\d{4}))?/i)
+      if (matchEs) {
+        const dia = matchEs[1].padStart(2, '0')
+        const mes = String(meses[matchEs[2].toLowerCase()] || 1).padStart(2, '0')
+        const anio = matchEs[3] || new Date().getFullYear()
+        deadline = `${anio}-${mes}-${dia}`
+      } else {
+        deadline = raw
+      }
+    }
+
     const project = await addProject({ ...session.pendingProject, deadline })
     session.state = null
     session.pendingProject = null
     return bot.sendMessage(chatId,
-      `✅ *${project.client_name}* agregado\n📊 Avance: 0%${project.budget ? `\n💰 $${Number(project.budget).toLocaleString()}` : ''}`,
+      `✅ *${project.client_name}* agregado\n📊 Avance: 0%${project.budget ? `\n💰 $${Number(project.budget).toLocaleString()}` : ''}${deadline ? `\n📅 Entrega: ${deadline}` : ''}`,
       { parse_mode: 'Markdown' }
     )
   }
