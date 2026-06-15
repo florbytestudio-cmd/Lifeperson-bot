@@ -321,20 +321,23 @@ bot.on('callback_query', async (query) => {
         )
       }
 
-      // Múltiples transacciones — mostrar resumen y pedir tarjeta
+      // Múltiples transacciones — dar opción de asignar individual o todas a una
       let summary = `✅ Detecté *${transactions.length} transacciones*:\n\n`
       transactions.forEach((t, i) => {
         const icon = t.type === 'ingreso' ? '💰' : '💸'
-        summary += `${icon} *$${t.amount}* — ${t.description}\n`
+        summary += `${i+1}. ${icon} *$${t.amount}* — ${t.description}\n`
       })
       session.pendingMultiTransactions = transactions
+      session.pendingMultiIndex = 0 // para asignación individual
+
       const keyboard = {
         inline_keyboard: [
-          ...cards.map(c => [{ text: `Cargar todo a ${c.bank}`, callback_data: `multi_card_${c.id}` }]),
+          ...cards.map(c => [{ text: `📦 Todo a ${c.bank}`, callback_data: `multi_all_${c.id}` }]),
+          [{ text: '🔀 Asignar una por una', callback_data: 'multi_individual' }],
           [{ text: '❌ Cancelar', callback_data: 'cancel' }]
         ]
       }
-      return bot.sendMessage(chatId, summary + '\n¿A qué tarjeta las cargo todas?', { parse_mode: 'Markdown', reply_markup: keyboard })
+      return bot.sendMessage(chatId, summary + '\n¿Cómo las cargo?', { parse_mode: 'Markdown', reply_markup: keyboard })
     }
     if (data === 'audio_prospecto') {
       const { fileUrl } = session.pendingAudio || {}
@@ -365,21 +368,72 @@ bot.on('callback_query', async (query) => {
       await supabase.from('transactions').delete().eq('id', data.replace('txn_del_', ''))
       return bot.sendMessage(chatId, '✅ Registro eliminado.')
     }
-    if (data.startsWith('multi_card_')) {
-      const cardId = data.replace('multi_card_', '')
+    // Cargar TODAS las transacciones a una sola tarjeta
+    if (data.startsWith('multi_all_')) {
+      const cardId = data.replace('multi_all_', '')
       const txns = session.pendingMultiTransactions || []
       session.pendingMultiTransactions = null
+      session.pendingMultiIndex = 0
       if (!txns.length) return bot.sendMessage(chatId, 'No hay transacciones pendientes.')
-      let saved = 0
       for (const t of txns) {
         await supabase.from('transactions').insert([{ card_id: cardId, amount: t.amount, description: t.description, type: t.type }])
-        saved++
       }
       const cards = await getCards()
       const card = cards.find(c => c.id === cardId)
+      let result = `✅ *${txns.length} registros* guardados en *${card?.bank}*:\n\n`
+      txns.forEach(t => { result += `${t.type==='ingreso'?'💰':'💸'} $${t.amount} — ${t.description}\n` })
+      return bot.sendMessage(chatId, result, { parse_mode: 'Markdown' })
+    }
+
+    // Asignar transacciones una por una a tarjetas distintas
+    if (data === 'multi_individual') {
+      const txns = session.pendingMultiTransactions || []
+      if (!txns.length) return bot.sendMessage(chatId, 'No hay transacciones.')
+      const idx = session.pendingMultiIndex || 0
+      const t = txns[idx]
+      const cards = await getCards()
+      const icon = t.type === 'ingreso' ? '💰' : '💸'
+      const keyboard = {
+        inline_keyboard: [
+          ...cards.map(c => [{ text: c.bank, callback_data: `multi_one_${c.id}` }]),
+          [{ text: '❌ Cancelar', callback_data: 'cancel' }]
+        ]
+      }
       return bot.sendMessage(chatId,
-        `✅ *${saved} transacciones* registradas en *${card?.bank}*`,
-        { parse_mode: 'Markdown' }
+        `Transacción ${idx+1} de ${txns.length}:\n${icon} *$${t.amount}* — ${t.description}\n\n¿A qué tarjeta?`,
+        { parse_mode: 'Markdown', reply_markup: keyboard }
+      )
+    }
+
+    // Guardar una transacción individual y pasar a la siguiente
+    if (data.startsWith('multi_one_')) {
+      const cardId = data.replace('multi_one_', '')
+      const txns = session.pendingMultiTransactions || []
+      const idx = session.pendingMultiIndex || 0
+      const t = txns[idx]
+      await supabase.from('transactions').insert([{ card_id: cardId, amount: t.amount, description: t.description, type: t.type }])
+      const cards = await getCards()
+      const card = cards.find(c => c.id === cardId)
+      const icon = t.type === 'ingreso' ? '💰' : '💸'
+      await bot.sendMessage(chatId, `✅ ${icon} $${t.amount} — ${t.description} → *${card?.bank}*`, { parse_mode: 'Markdown' })
+      const nextIdx = idx + 1
+      if (nextIdx >= txns.length) {
+        session.pendingMultiTransactions = null
+        session.pendingMultiIndex = 0
+        return bot.sendMessage(chatId, '✅ Todas las transacciones registradas.')
+      }
+      session.pendingMultiIndex = nextIdx
+      const next = txns[nextIdx]
+      const nextIcon = next.type === 'ingreso' ? '💰' : '💸'
+      const keyboard = {
+        inline_keyboard: [
+          ...cards.map(c => [{ text: c.bank, callback_data: `multi_one_${c.id}` }]),
+          [{ text: '❌ Cancelar', callback_data: 'cancel' }]
+        ]
+      }
+      return bot.sendMessage(chatId,
+        `Transacción ${nextIdx+1} de ${txns.length}:\n${nextIcon} *$${next.amount}* — ${next.description}\n\n¿A qué tarjeta?`,
+        { parse_mode: 'Markdown', reply_markup: keyboard }
       )
     }
     if (data === 'banco_edit_cards') {
