@@ -1,48 +1,44 @@
 import 'dotenv/config'
 import express from 'express'
-import { createServer } from 'http'
 import TelegramBot from 'node-telegram-bot-api'
 import { handleBanco, handleBancoCallback, handleTicketPhoto, handleTransactionText } from './banco.js'
-import { handleFlorbyte, handleFlorbyteCallback, handleProspectAudio, handleProspectText } from './florbyte.js'
+import { handleFlorbyte, handleFlorbyteCallback, handleProspectAudio, handleProspectText, handleProjectText } from './florbyte.js'
 import { handleMemberships, handleMembershipsCallback, handleMembershipText } from './memberships.js'
 import { handleTareas, handleTareasCallback, handleTaskText } from './tareas.js'
-import { handleProyectos, handleProyectosCallback, handleProjectText } from './proyectos.js'
 import { handleNotas, handleNotasCallback, handleNoteText, handleNoteAudio, handleNoteSearch } from './notas.js'
 import { addCategory, getCategories, addCard, getCards, supabase, getDashboardStats } from './db.js'
 import { startScheduler } from './scheduler.js'
 import { transcribeAudio } from './ai.js'
-import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 3000
 
-// ── Express para dashboard ───────────────────────────────────────────────────
+// ── Express ──────────────────────────────────────────────────────────────────
 const app = express()
+app.use(express.json())
 app.use(express.static(__dirname))
 
-app.get('/dashboard', (req, res) => {
-  res.sendFile(join(__dirname, 'dashboard.html'))
-})
-
-app.get('/api/dashboard', async (req, res) => {
-  try {
-    const stats = await getDashboardStats()
-    res.json(stats)
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
-
+app.get('/dashboard', (req, res) => res.sendFile(join(__dirname, 'dashboard.html')))
 app.get('/', (req, res) => res.redirect('/dashboard'))
 
-// ── CRUD API ────────────────────────────────────────────────────────────────
+app.get('/api/dashboard', async (req, res) => {
+  try { res.json(await getDashboardStats()) }
+  catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.get('/api/cards', async (req, res) => {
+  try {
+    const { data } = await supabase.from('cards').select('*').eq('active', true).order('bank')
+    res.json(data || [])
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
 app.get('/api/transactions', async (req, res) => {
   try {
     const start = new Date(); start.setDate(1); start.setHours(0,0,0,0)
-    const { data } = await supabase.from('transactions')
-      .select('*, cards(bank,label)').gte('created_at', start.toISOString()).order('created_at', { ascending: false })
+    const { data } = await supabase.from('transactions').select('*, cards(bank,label)').gte('created_at', start.toISOString()).order('created_at', { ascending: false })
     res.json(data || [])
   } catch(e) { res.status(500).json({ error: e.message }) }
 })
@@ -70,10 +66,63 @@ app.delete('/api/transactions/:id', async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }) }
 })
 
-app.get('/api/cards', async (req, res) => {
+app.get('/api/prospects', async (req, res) => {
   try {
-    const { data } = await supabase.from('cards').select('*').eq('active', true).order('bank')
+    const { data } = await supabase.from('prospects').select('*').order('created_at', { ascending: false })
     res.json(data || [])
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.post('/api/prospects', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('prospects').insert([req.body]).select().single()
+    if (error) throw new Error(error.message)
+    res.json(data)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.patch('/api/prospects/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('prospects').update(req.body).eq('id', req.params.id).select().single()
+    if (error) throw new Error(error.message)
+    res.json(data)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.delete('/api/prospects/:id', async (req, res) => {
+  try {
+    await supabase.from('prospects').delete().eq('id', req.params.id)
+    res.json({ ok: true })
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.get('/api/projects', async (req, res) => {
+  try {
+    const { data } = await supabase.from('projects').select('*').order('created_at', { ascending: false })
+    res.json(data || [])
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.post('/api/projects', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('projects').insert([req.body]).select().single()
+    if (error) throw new Error(error.message)
+    res.json(data)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.patch('/api/projects/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('projects').update(req.body).eq('id', req.params.id).select().single()
+    if (error) throw new Error(error.message)
+    res.json(data)
+  } catch(e) { res.status(500).json({ error: e.message }) }
+})
+
+app.delete('/api/projects/:id', async (req, res) => {
+  try {
+    await supabase.from('projects').delete().eq('id', req.params.id)
+    res.json({ ok: true })
   } catch(e) { res.status(500).json({ error: e.message }) }
 })
 
@@ -83,7 +132,6 @@ app.listen(PORT, () => console.log(`🌐 Dashboard en puerto ${PORT}`))
 const bot = new TelegramBot(process.env.TELEGRAM_TOKEN, { polling: true })
 const ALLOWED_USER = process.env.TELEGRAM_USER_ID
 const sessions = {}
-
 function getSession(chatId) {
   if (!sessions[chatId]) sessions[chatId] = {}
   return sessions[chatId]
@@ -96,7 +144,7 @@ async function sendMainMenu(chatId) {
     inline_keyboard: [
       [{ text: '🏦 Banco', callback_data: 'cat_banco' }, { text: '💼 FlorByte', callback_data: 'cat_florbyte' }],
       [{ text: '📦 Membresías', callback_data: 'cat_membresias' }, { text: '✅ Tareas', callback_data: 'cat_tareas' }],
-      [{ text: '📁 Proyectos', callback_data: 'cat_proyectos' }, { text: '📝 Notas', callback_data: 'cat_notas' }],
+      [{ text: '📝 Notas', callback_data: 'cat_notas' }],
       ...customCats.map(c => ([{ text: `${c.icon} ${c.name}`, callback_data: `cat_custom_${c.id}` }])),
       [{ text: '➕ Nueva categoría', callback_data: 'cat_nueva' }],
     ]
@@ -129,28 +177,23 @@ bot.onText(/\/reporte/, async (msg) => {
     const d = await getDashboardStats()
     const hoy = new Date().toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' })
     let text = `📊 *Reporte diario — ${hoy}*\n\n`
-    text += `🏦 *BANCO*\n`
-    text += `💸 Gastos del mes: $${Number(d.banco.totalGastos).toFixed(2)}\n`
-    text += `💰 Ingresos del mes: $${Number(d.banco.totalIngresos).toFixed(2)}\n`
+    text += `🏦 *BANCO*\n💸 Gastos: $${Number(d.banco.totalGastos).toFixed(2)}\n💰 Ingresos: $${Number(d.banco.totalIngresos).toFixed(2)}\n`
     Object.entries(d.banco.porTarjeta).forEach(([k,v]) => { text += `  • ${k}: $${Number(v.gastos).toFixed(2)}\n` })
-    text += `\n💼 *FLORBYTE*\n`
-    text += `👥 Total: ${d.florbyte.total} · ✅ Interesados: ${d.florbyte.interesados} · ⏳ Pendientes: ${d.florbyte.pendientes}\n`
-    text += `\n📦 *MEMBRESÍAS*\n`
-    text += `💳 Costo mensual: $${Number(d.membresias.costoMensual).toFixed(2)}\n`
-    if (d.membresias.proximas.length) {
-      d.membresias.proximas.forEach(m => { text += `  🔔 ${m.name} — $${m.amount} (en ${m.daysLeft}d)\n` })
-    }
-    text += `\n✅ *TAREAS*\n`
-    text += `🔴 Alta: ${d.tareas.alta} · 🟡 Media: ${d.tareas.media} · 🟢 Baja: ${d.tareas.baja}\n`
-    if (d.tareas.alta > 0) {
-      d.tareas.lista.filter(t => t.priority === 'alta').slice(0,3).forEach(t => { text += `  • ${t.title}\n` })
-    }
-    if (d.proyectos.total > 0) {
-      text += `\n📁 *PROYECTOS* (${d.proyectos.total})\n`
+    text += `\n💼 *FLORBYTE*\n👥 Prospectos: ${d.florbyte.total} · ✅ Interesados: ${d.florbyte.interesados} · 🎉 Cerrados: ${d.florbyte.cerrados}\n`
+    text += `📁 Proyectos activos: ${d.proyectos.total}\n`
+    if (d.proyectos.lista.length) {
       d.proyectos.lista.forEach(p => {
         const bar = '█'.repeat(Math.round(p.progress/10)) + '░'.repeat(10-Math.round(p.progress/10))
         text += `  • ${p.client_name}: ${bar} ${p.progress}%\n`
       })
+    }
+    text += `\n📦 *MEMBRESÍAS* — $${Number(d.membresias.costoMensual).toFixed(2)}/mes\n`
+    if (d.membresias.proximas.length) {
+      d.membresias.proximas.forEach(m => { text += `  🔔 ${m.name} — $${m.amount} (en ${m.daysLeft}d)\n` })
+    }
+    text += `\n✅ *TAREAS* — 🔴 ${d.tareas.alta} · 🟡 ${d.tareas.media} · 🟢 ${d.tareas.baja}\n`
+    if (d.tareas.alta > 0) {
+      d.tareas.lista.filter(t => t.priority === 'alta').slice(0,3).forEach(t => { text += `  • ${t.title}\n` })
     }
     await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' })
   } catch (err) {
@@ -243,12 +286,10 @@ bot.on('callback_query', async (query) => {
   const data = query.data
   try {
     await bot.answerCallbackQuery(query.id)
-
     if (data === 'cancel') {
       session.state = null; session.pendingAudio = null
       return bot.sendMessage(chatId, 'Cancelado.')
     }
-
     if (data === 'audio_banco') {
       const { fileUrl } = session.pendingAudio || {}
       session.pendingAudio = null
@@ -267,14 +308,13 @@ bot.on('callback_query', async (query) => {
           ]
         }
         return bot.sendMessage(chatId,
-          `📝 Entendí: *$${amount}*\n"${transcript}"\n\n¿A qué tarjeta lo cargo?`,
+          `📝 Entendí: *$${amount}*\n"${transcript}"\n\n¿A qué tarjeta?`,
           { parse_mode: 'Markdown', reply_markup: keyboard }
         )
       } else {
-        return bot.sendMessage(chatId, `No detecté monto en: "${transcript}"\n\nEscríbelo manual: \`250 gasolina\``, { parse_mode: 'Markdown' })
+        return bot.sendMessage(chatId, `No detecté monto en: "${transcript}"\n\nEscríbelo: \`250 gasolina\``, { parse_mode: 'Markdown' })
       }
     }
-
     if (data === 'audio_prospecto') {
       const { fileUrl } = session.pendingAudio || {}
       session.pendingAudio = null
@@ -282,7 +322,6 @@ bot.on('callback_query', async (query) => {
       session.state = 'awaiting_prospect_audio'
       return handleProspectAudio(bot, { chat: { id: chatId }, from: query.from }, session, fileUrl)
     }
-
     if (data === 'audio_nota') {
       const { fileUrl } = session.pendingAudio || {}
       session.pendingAudio = null
@@ -290,10 +329,8 @@ bot.on('callback_query', async (query) => {
       session.state = 'awaiting_note_audio'
       return handleNoteAudio(bot, { chat: { id: chatId }, from: query.from }, session, fileUrl)
     }
-
     if (data === 'banco_editar') {
-      const { data: txns } = await supabase.from('transactions')
-        .select('*, cards(bank)').order('created_at', { ascending: false }).limit(8)
+      const { data: txns } = await supabase.from('transactions').select('*, cards(bank)').order('created_at', { ascending: false }).limit(8)
       if (!txns?.length) return bot.sendMessage(chatId, 'No hay transacciones.')
       const keyboard = {
         inline_keyboard: [
@@ -303,12 +340,10 @@ bot.on('callback_query', async (query) => {
       }
       return bot.sendMessage(chatId, '¿Cuál registro eliminas?', { reply_markup: keyboard })
     }
-
     if (data.startsWith('txn_del_')) {
       await supabase.from('transactions').delete().eq('id', data.replace('txn_del_', ''))
       return bot.sendMessage(chatId, '✅ Registro eliminado.')
     }
-
     if (data === 'banco_edit_cards') {
       const cards = await getCards()
       const keyboard = {
@@ -320,32 +355,25 @@ bot.on('callback_query', async (query) => {
       }
       return bot.sendMessage(chatId, '¿Qué tarjeta editas?', { reply_markup: keyboard })
     }
-
     if (data.startsWith('card_rename_')) {
       session.state = 'awaiting_card_rename'
       session.pendingCard = { cardId: data.replace('card_rename_', '') }
       return bot.sendMessage(chatId, '¿Cuál es el nuevo nombre?')
     }
-
     if (data === 'cat_banco') return handleBanco(bot, query.message, session)
     if (data === 'cat_florbyte') return handleFlorbyte(bot, query.message, session)
     if (data === 'cat_membresias') return handleMemberships(bot, query.message, session)
     if (data === 'cat_tareas') return handleTareas(bot, query.message, session)
-    if (data === 'cat_proyectos') return handleProyectos(bot, query.message, session)
     if (data === 'cat_notas') return handleNotas(bot, query.message, session)
-
     if (data === 'cat_nueva') {
       session.state = 'awaiting_category_name'
       return bot.sendMessage(chatId, '➕ ¿Nombre de la nueva categoría? Ej: `🏥 Salud`', { parse_mode: 'Markdown' })
     }
-
     if (data.startsWith('banco_') || data.startsWith('ticket_')) return handleBancoCallback(bot, query, session)
     if (data.startsWith('fb_')) return handleFlorbyteCallback(bot, query, session)
     if (data.startsWith('mem_')) return handleMembershipsCallback(bot, query, session)
     if (data.startsWith('tarea_')) return handleTareasCallback(bot, query, session)
-    if (data.startsWith('proy_')) return handleProyectosCallback(bot, query, session)
     if (data.startsWith('nota_')) return handleNotasCallback(bot, query, session)
-
   } catch (err) {
     console.error('[bot] Error callback:', err.message)
     await bot.sendMessage(chatId, `Error: ${err.message}`)

@@ -98,7 +98,6 @@ tr:hover td{background:#faf9f6}
     <button class="nav-item" onclick="showPage('florbyte',this)">💼 FlorByte</button>
     <button class="nav-item" onclick="showPage('membresias',this)">📦 Membresías</button>
     <button class="nav-item" onclick="showPage('tareas',this)">✅ Tareas</button>
-    <button class="nav-item" onclick="showPage('proyectos',this)">📁 Proyectos</button>
     <button class="nav-item" onclick="showPage('notas',this)">📝 Notas</button>
   </div>
 </nav>
@@ -299,7 +298,7 @@ function renderAll() {
   const active = document.querySelector('.page.active')?.id?.replace('page-','')
   renderPage(active || 'overview')
   // Pre-render otros en segundo plano
-  setTimeout(() => ['overview','banco','florbyte','membresias','tareas','proyectos','notas']
+  setTimeout(() => ['overview','banco','florbyte','membresias','tareas','notas']
     .filter(p => p !== active).forEach(renderPage), 100)
 }
 
@@ -310,7 +309,6 @@ function renderPage(id) {
   else if (id === 'florbyte') renderFlorbyte()
   else if (id === 'membresias') renderMembresias()
   else if (id === 'tareas') renderTareas()
-  else if (id === 'proyectos') renderProyectos()
   else if (id === 'notas') renderNotas()
 }
 
@@ -491,15 +489,16 @@ function renderBanco() {
 }
 
 function renderFlorbyte() {
-  const { florbyte } = DATA
-  const statusBadge = { pendiente:'badge-gray', interesado:'badge-green', no_interesado:'badge-red', cerrado:'badge-violet' }
-  const statusLabel = { pendiente:'Pendiente', interesado:'Interesado', no_interesado:'No interesado', cerrado:'Cerrado' }
+  const { florbyte, proyectos } = DATA
+  const statusBadge = { pendiente:'badge-gray', interesado:'badge-green', no_interesado:'badge-red', cerrado:'badge-violet', negociacion:'badge-amber' }
+  const statusLabel = { pendiente:'Pendiente', interesado:'Interesado', no_interesado:'No interesado', cerrado:'Cerrado', negociacion:'Negociación' }
+
   document.getElementById('florbyte-content').innerHTML = `
     <div class="grid grid-4" style="margin-bottom:16px">
-      <div class="card"><div class="stat-val">${florbyte.total}</div><div class="stat-label">Total</div></div>
+      <div class="card"><div class="stat-val">${florbyte.total}</div><div class="stat-label">Prospectos</div></div>
       <div class="card"><div class="stat-val" style="color:var(--amber)">${florbyte.pendientes}</div><div class="stat-label">Pendientes</div></div>
       <div class="card"><div class="stat-val" style="color:var(--green)">${florbyte.interesados}</div><div class="stat-label">Interesados</div></div>
-      <div class="card"><div class="stat-val" style="color:var(--violet)">${florbyte.cerrados}</div><div class="stat-label">Cerrados</div></div>
+      <div class="card"><div class="stat-val" style="color:var(--violet)">${proyectos.total}</div><div class="stat-label">Proyectos activos</div></div>
     </div>
     <div class="grid grid-2" style="margin-bottom:16px">
       <div class="card">
@@ -511,11 +510,18 @@ function renderFlorbyte() {
         <div class="chart-container"><canvas id="chart-industry"></canvas></div>
       </div>
     </div>
-    <div class="card">
-      <div class="section-title">Todos los prospectos</div>
+
+    <!-- Prospectos -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-title" style="margin:0">Prospectos</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="openProspectModal()">+ Agregar</button>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Fecha</th><th>Nombre</th><th>Negocio</th><th>Plataforma</th><th>Industria</th><th>Estado</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Nombre</th><th>Negocio</th><th>Plataforma</th><th>Industria</th><th>Estado</th><th>Acciones</th></tr></thead>
           <tbody>
             ${florbyte.recientes.length ? florbyte.recientes.map(p => `
               <tr>
@@ -524,28 +530,240 @@ function renderFlorbyte() {
                 <td>${p.business||'—'}</td>
                 <td>${p.platform||'—'}</td>
                 <td>${p.industry||'—'}</td>
-                <td><span class="badge ${statusBadge[p.status]||'badge-gray'}">${statusLabel[p.status]||p.status}</span></td>
+                <td>
+                  <select class="badge ${statusBadge[p.status]||'badge-gray'}" onchange="updateProspectStatus('${p.id}',this.value)" style="border:none;cursor:pointer;background:inherit;color:inherit;font-weight:500;font-size:11px">
+                    ${Object.entries(statusLabel).map(([v,l]) => `<option value="${v}" ${p.status===v?'selected':''}>${l}</option>`).join('')}
+                  </select>
+                </td>
+                <td>
+                  <div class="actions">
+                    <button class="btn btn-ghost btn-sm" onclick='openProspectModal(${JSON.stringify(p)})'>✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteProspect('${p.id}')">🗑️</button>
+                  </div>
+                </td>
               </tr>
-            `).join('') : '<tr><td colspan="6" class="empty">Sin prospectos</td></tr>'}
+            `).join('') : '<tr><td colspan="7" class="empty">Sin prospectos</td></tr>'}
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Proyectos -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-title" style="margin:0">Proyectos activos</div>
+        <button class="btn btn-primary btn-sm" onclick="openProjectModal()">+ Agregar</button>
+      </div>
+      <div class="grid grid-2">
+        ${proyectos.lista.length ? proyectos.lista.map(p => `
+          <div class="card" style="border:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+              <div>
+                <div style="font-size:15px;font-weight:700">${p.client_name}</div>
+                ${p.description?`<div style="font-size:12px;color:var(--text3);margin-top:2px">${p.description}</div>`:''}
+              </div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <span class="badge badge-violet" style="font-size:13px;font-weight:700">${p.progress}%</span>
+                <button class="btn btn-ghost btn-sm" onclick='openProjectModal(${JSON.stringify(p)})'>✏️</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProject('${p.id}')">🗑️</button>
+              </div>
+            </div>
+            <div class="progress"><div class="progress-fill" style="width:${p.progress}%"></div></div>
+            <div style="display:flex;gap:12px;margin-top:10px;font-size:12px;color:var(--text3)">
+              ${p.budget?`<span>💰 ${money(p.budget)}</span>`:''}
+              ${p.deadline?`<span>📅 ${fmtDate(p.deadline)}</span>`:''}
+            </div>
+            <div style="margin-top:10px">
+              <input type="range" min="0" max="100" step="5" value="${p.progress}"
+                oninput="this.nextElementSibling.textContent=this.value+'%'"
+                onchange="updateProjectProgress('${p.id}',this.value)"
+                style="width:100%;accent-color:var(--violet)"/>
+              <span style="font-size:11px;color:var(--text3)">${p.progress}%</span>
+            </div>
+          </div>
+        `).join('') : '<div class="card empty">Sin proyectos activos</div>'}
       </div>
     </div>
   `
   destroyChart('funnel')
   charts['funnel'] = new Chart(document.getElementById('chart-funnel'), {
     type: 'bar',
-    data: { labels:['Pendiente','Interesado','Cerrado'], datasets:[{ data:[florbyte.pendientes, florbyte.interesados, florbyte.cerrados], backgroundColor:['#e5e7eb','#7c3aed','#d1fae5'], borderRadius:8, borderWidth:0 }] },
+    data: { labels:['Pendiente','Interesado','Negociación','Cerrado'], datasets:[{ data:[florbyte.pendientes, florbyte.interesados, florbyte.total-florbyte.pendientes-florbyte.interesados-florbyte.cerrados, florbyte.cerrados], backgroundColor:['#e5e7eb','#7c3aed','#fef3c7','#d1fae5'], borderRadius:8, borderWidth:0 }] },
     options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{stepSize:1}},x:{grid:{display:false}}} }
   })
   destroyChart('industry')
   const indCounts = {}
   florbyte.recientes.forEach(p => { if(p.industry) indCounts[p.industry]=(indCounts[p.industry]||0)+1 })
-  charts['industry'] = new Chart(document.getElementById('chart-industry'), {
-    type: 'doughnut',
-    data: { labels: Object.keys(indCounts), datasets:[{ data: Object.values(indCounts), backgroundColor:['#7c3aed','#2563eb','#059669','#d97706','#dc2626'], borderWidth:0 }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}} }
-  })
+  if (Object.keys(indCounts).length) {
+    charts['industry'] = new Chart(document.getElementById('chart-industry'), {
+      type: 'doughnut',
+      data: { labels: Object.keys(indCounts), datasets:[{ data: Object.values(indCounts), backgroundColor:['#7c3aed','#2563eb','#059669','#d97706','#dc2626'], borderWidth:0 }] },
+      options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}} }
+    })
+  }
+}
+
+// ── Prospect CRUD ─────────────────────────────────────────────────────────────
+function openProspectModal(prospect=null) {
+  const isEdit = !!prospect
+  const html = `
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">${isEdit ? 'Editar prospecto' : 'Nuevo prospecto'}</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="p-name" value="${prospect?.name||''}"/></div>
+        <div class="form-group"><label class="form-label">Negocio</label><input class="form-input" id="p-business" value="${prospect?.business||''}"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Plataforma</label>
+          <select class="form-input" id="p-platform">
+            ${['instagram','facebook','ambos','otro'].map(v=>`<option value="${v}" ${prospect?.platform===v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Industria</label>
+          <select class="form-input" id="p-industry">
+            ${['restaurante','ropa','belleza','inmobiliaria','otro'].map(v=>`<option value="${v}" ${prospect?.industry===v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">URL de perfil</label><input class="form-input" id="p-url" value="${prospect?.profile_url||''}" placeholder="instagram.com/..."/></div>
+      <div class="form-group"><label class="form-label">Estado</label>
+        <select class="form-input" id="p-status">
+          ${[['pendiente','Pendiente'],['interesado','Interesado'],['negociacion','Negociación'],['cerrado','Cerrado'],['no_interesado','No interesado']].map(([v,l])=>`<option value="${v}" ${prospect?.status===v?'selected':''}>${l}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Notas</label><textarea class="form-input" id="p-notes" rows="2">${prospect?.notes||''}</textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveProspect('${prospect?.id||''}')">Guardar</button>
+      </div>
+    </div>
+  `
+  showGenericModal(html)
+}
+
+async function saveProspect(id) {
+  const body = {
+    name: document.getElementById('p-name').value,
+    business: document.getElementById('p-business').value,
+    platform: document.getElementById('p-platform').value,
+    industry: document.getElementById('p-industry').value,
+    profile_url: document.getElementById('p-url').value,
+    status: document.getElementById('p-status').value,
+    notes: document.getElementById('p-notes').value,
+  }
+  try {
+    const url = id ? `/api/prospects/${id}` : '/api/prospects'
+    const method = id ? 'PATCH' : 'POST'
+    const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+    if (!res.ok) throw new Error()
+    closeGenericModal()
+    showToast(id ? 'Prospecto actualizado ✓' : 'Prospecto agregado ✓')
+    await loadData()
+  } catch { showToast('Error al guardar', false) }
+}
+
+async function updateProspectStatus(id, status) {
+  try {
+    await fetch(`/api/prospects/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ status }) })
+    showToast('Estado actualizado ✓')
+    if (status === 'cerrado') {
+      if (confirm('¿Convertir este prospecto en proyecto activo?')) {
+        openProjectModal({ client_name: '' })
+      }
+    }
+    await loadData()
+  } catch { showToast('Error', false) }
+}
+
+async function deleteProspect(id) {
+  if (!confirm('¿Eliminar este prospecto?')) return
+  try {
+    await fetch(`/api/prospects/${id}`, { method:'DELETE' })
+    showToast('Prospecto eliminado ✓')
+    await loadData()
+  } catch { showToast('Error al eliminar', false) }
+}
+
+// ── Project CRUD ──────────────────────────────────────────────────────────────
+function openProjectModal(project=null) {
+  const isEdit = !!project?.id
+  const html = `
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">${isEdit ? 'Editar proyecto' : 'Nuevo proyecto'}</div>
+      <div class="form-group"><label class="form-label">Cliente *</label><input class="form-input" id="pr-name" value="${project?.client_name||''}"/></div>
+      <div class="form-group"><label class="form-label">Descripción</label><input class="form-input" id="pr-desc" value="${project?.description||''}"/></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Presupuesto ($)</label><input class="form-input" type="number" id="pr-budget" value="${project?.budget||''}"/></div>
+        <div class="form-group"><label class="form-label">Fecha entrega</label><input class="form-input" type="date" id="pr-deadline" value="${project?.deadline||''}"/></div>
+      </div>
+      <div class="form-group"><label class="form-label">Avance: <span id="pr-progress-label">${project?.progress||0}%</span></label>
+        <input type="range" class="form-input" id="pr-progress" min="0" max="100" step="5" value="${project?.progress||0}" style="padding:0;accent-color:var(--violet)" oninput="document.getElementById('pr-progress-label').textContent=this.value+'%'"/>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeGenericModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveProject('${project?.id||''}')">Guardar</button>
+      </div>
+    </div>
+  `
+  showGenericModal(html)
+}
+
+async function saveProject(id) {
+  const progress = parseInt(document.getElementById('pr-progress').value)
+  const body = {
+    client_name: document.getElementById('pr-name').value,
+    description: document.getElementById('pr-desc').value,
+    budget: parseFloat(document.getElementById('pr-budget').value) || null,
+    deadline: document.getElementById('pr-deadline').value || null,
+    progress,
+    status: progress === 100 ? 'terminado' : 'activo',
+  }
+  if (!body.client_name) return showToast('El nombre del cliente es requerido', false)
+  try {
+    const url = id ? `/api/projects/${id}` : '/api/projects'
+    const method = id ? 'PATCH' : 'POST'
+    const res = await fetch(url, { method, headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) })
+    if (!res.ok) throw new Error()
+    closeGenericModal()
+    showToast(id ? 'Proyecto actualizado ✓' : 'Proyecto agregado ✓')
+    await loadData()
+  } catch { showToast('Error al guardar', false) }
+}
+
+async function updateProjectProgress(id, progress) {
+  try {
+    const status = parseInt(progress) === 100 ? 'terminado' : 'activo'
+    await fetch(`/api/projects/${id}`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ progress: parseInt(progress), status }) })
+    showToast(`Avance actualizado a ${progress}% ✓`)
+    if (parseInt(progress) === 100) await loadData()
+  } catch { showToast('Error', false) }
+}
+
+async function deleteProject(id) {
+  if (!confirm('¿Eliminar este proyecto?')) return
+  try {
+    await fetch(`/api/projects/${id}`, { method:'DELETE' })
+    showToast('Proyecto eliminado ✓')
+    await loadData()
+  } catch { showToast('Error al eliminar', false) }
+}
+
+// ── Generic Modal ─────────────────────────────────────────────────────────────
+function showGenericModal(html) {
+  let overlay = document.getElementById('generic-modal')
+  if (!overlay) {
+    overlay = document.createElement('div')
+    overlay.id = 'generic-modal'
+    overlay.className = 'modal-overlay'
+    overlay.onclick = e => { if (e.target === overlay) closeGenericModal() }
+    document.body.appendChild(overlay)
+  }
+  overlay.innerHTML = html
+  overlay.classList.add('open')
+}
+function closeGenericModal() {
+  const overlay = document.getElementById('generic-modal')
+  if (overlay) overlay.classList.remove('open')
 }
 
 function renderMembresias() {
@@ -603,34 +821,6 @@ function renderTareas() {
           </tbody>
         </table>
       </div>
-    </div>
-  `
-}
-
-function renderProyectos() {
-  const { proyectos } = DATA
-  document.getElementById('proyectos-content').innerHTML = `
-    <div class="card" style="margin-bottom:16px">
-      <div class="stat-val">${proyectos.total}</div>
-      <div class="stat-label">Clientes activos</div>
-    </div>
-    <div class="grid grid-2">
-      ${proyectos.lista.length ? proyectos.lista.map(p => `
-        <div class="card">
-          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">
-            <div>
-              <div style="font-size:16px;font-weight:700">${p.client_name}</div>
-              ${p.description?`<div style="font-size:12px;color:var(--text3);margin-top:2px">${p.description}</div>`:''}
-            </div>
-            <span class="badge badge-violet" style="font-size:14px;font-weight:700">${p.progress}%</span>
-          </div>
-          <div class="progress"><div class="progress-fill" style="width:${p.progress}%"></div></div>
-          <div style="display:flex;gap:16px;margin-top:12px;font-size:12px;color:var(--text3)">
-            ${p.budget?`<span>💰 ${money(p.budget)}</span>`:''}
-            ${p.deadline?`<span>📅 ${fmtDate(p.deadline)}</span>`:''}
-          </div>
-        </div>
-      `).join('') : '<div class="card empty">Sin proyectos activos</div>'}
     </div>
   `
 }
