@@ -358,11 +358,22 @@ function renderOverview() {
   const cardLabels = Object.keys(banco.porTarjeta)
   const cardData = cardLabels.map(k => banco.porTarjeta[k].gastos)
   if (cardLabels.length) {
-    charts['cards'] = new Chart(document.getElementById('chart-cards'), {
-      type: 'doughnut',
-      data: { labels: cardLabels, datasets: [{ data: cardData, backgroundColor: ['#7c3aed','#2563eb','#059669','#d97706'], borderWidth: 0 }] },
-      options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{size:11}, padding:12 } } } }
-    })
+  charts['cards'] = new Chart(document.getElementById('chart-cards'), {
+    type: 'doughnut',
+    data: { labels: cardLabels, datasets: [{ data: cardData, backgroundColor: ['#7c3aed','#2563eb','#059669','#d97706'], borderWidth: 2, borderColor: '#fff' }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position:'bottom', labels:{ font:{size:12}, padding:14 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: $${Number(ctx.raw).toLocaleString('es-MX', { minimumFractionDigits:2 })}`
+          }
+        }
+      }
+    }
+  })
   }
   // Gráfica prospectos
   destroyChart('prospects')
@@ -440,12 +451,42 @@ function renderBanco() {
     data: { labels: days.map(d=>`Día ${d}`), datasets: [{ label:'Gastos', data: days.map(d=>byDay[d]), borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,.1)', fill:true, tension:.4, pointRadius:4 }] },
     options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true}, x:{grid:{display:false}} } }
   })
-  // Gráfica tipo
+  // Gráfica tipo — barras con montos
   destroyChart('type')
   charts['type'] = new Chart(document.getElementById('chart-type'), {
-    type: 'doughnut',
-    data: { labels:['Gastos','Ingresos'], datasets:[{ data:[banco.totalGastos, banco.totalIngresos], backgroundColor:['#fee2e2','#d1fae5'], borderColor:['#dc2626','#059669'], borderWidth:2 }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:16 } } } }
+    type: 'bar',
+    data: {
+      labels: ['Gastos', 'Ingresos'],
+      datasets: [{
+        data: [banco.totalGastos, banco.totalIngresos],
+        backgroundColor: ['rgba(220,38,38,.15)', 'rgba(5,150,105,.15)'],
+        borderColor: ['#dc2626', '#059669'],
+        borderWidth: 2,
+        borderRadius: 10,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => ' $' + Number(ctx.raw).toLocaleString('es-MX', { minimumFractionDigits:2 })
+          }
+        },
+        datalabels: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: v => '$' + Number(v).toLocaleString('es-MX', { maximumFractionDigits:0 })
+          }
+        },
+        x: { grid: { display: false } }
+      }
+    }
   })
 }
 
