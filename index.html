@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Majalca — Cabañas de Peter</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap');
+:root{--bg:#0d100c;--surface:#161a13;--border:#2a3022;--text:#f2f4ee;--muted:#8a9180;--accent:#84cc16;--accent2:#4d7c0f}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+
+header{padding:20px 28px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--accent2),var(--accent));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.logo-title{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:700}
+.logo-sub{font-size:11px;color:var(--muted);margin-top:1px}
+.badge{font-size:11px;font-weight:600;color:var(--accent);background:rgba(132,204,22,.1);border:1px solid rgba(132,204,22,.25);padding:4px 12px;border-radius:99px}
+
+main{padding:24px 28px;max-width:1100px;margin:0 auto}
+
+.map-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:22px}
+.map-head{padding:16px 20px;border-bottom:1px solid var(--border)}
+.map-head h2{font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600}
+.map-head p{font-size:11px;color:var(--muted);margin-top:2px}
+#mapa{width:100%;height:520px;background:#1a2412}
+
+.tooltip-box{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  background:var(--surface);border:1px solid var(--accent);border-radius:14px;
+  padding:20px 24px;z-index:1000;min-width:240px;text-align:center;
+  display:none;box-shadow:0 20px 60px rgba(0,0,0,.6);
+}
+.tooltip-box .t-icon{font-size:36px;margin-bottom:8px}
+.tooltip-box .t-name{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px}
+.tooltip-box .t-coord{font-size:11px;color:var(--muted);margin-bottom:14px}
+.tooltip-box .t-btn{display:inline-flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.tooltip-box a,.tooltip-box button{font-size:11px;padding:7px 13px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);text-decoration:none;cursor:pointer;font-family:inherit}
+.tooltip-box .close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px 17px;cursor:pointer;transition:border-color .2s}
+.card:hover{border-color:var(--accent)}
+.card-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.card-num{width:26px;height:26px;border-radius:8px;background:var(--accent2);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.card-name{font-weight:600;font-size:13px}
+.card-lat,.card-lng{font-size:11px;color:var(--muted);font-family:'Space Grotesk',sans-serif}
+
+footer{text-align:center;color:var(--muted);font-size:10px;padding:18px;border-top:1px solid var(--border);margin-top:6px}
+</style>
+
+<!-- Leaflet para mapa satelital real sin API key -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌲</div>
+    <div>
+      <div class="logo-title">Majalca — Cabañas</div>
+      <div class="logo-sub">Levantamiento GPS · FlorByte Studio</div>
+    </div>
+  </div>
+  <div class="badge">4 cabañas + 1 palapa</div>
+</header>
+
+<main>
+  <div class="map-wrap">
+    <div class="map-head">
+      <h2>Vista satelital con vegetación real</h2>
+      <p>Toca cualquier ícono de cabaña para ver sus coordenadas. Usa pinch para zoom en móvil.</p>
+    </div>
+    <div id="mapa"></div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="tooltip-box" id="tooltip">
+  <button class="close" onclick="cerrar()">✕</button>
+  <div class="t-icon" id="t-icon">🏠</div>
+  <div class="t-name" id="t-name"></div>
+  <div class="t-coord" id="t-coord"></div>
+  <div class="t-btn">
+    <a id="t-maps" target="_blank" href="#">📍 Ver en Maps</a>
+    <button onclick="copiar()">📋 Copiar coords</button>
+  </div>
+</div>
+
+<footer>FlorByte Studio · Coordenadas estimadas en base a levantamiento de campo · Cañón de Majalca, Chihuahua</footer>
+
+<script>
+const cabanas = [
+  { nombre:"Cabaña 1", lat:29.071380, lng:-106.525180 },
+  { nombre:"Cabaña 2", lat:29.071250, lng:-106.525450 },
+  { nombre:"Palapa",   lat:29.071100, lng:-106.525780 },
+  { nombre:"Cabaña 4", lat:29.070980, lng:-106.525550 },
+  { nombre:"Cabaña 5", lat:29.070820, lng:-106.525520 },
+];
+
+// ── Mapa con Leaflet + tile satelital de ESRI (sin API key) ──
+document.getElementById('mapa').style.height = '520px';
+const map = L.map('mapa', {
+  center: [29.071100, -106.525550],
+  zoom: 19,
+  zoomControl: true,
+});
+
+// Capa satelital base
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: '© Esri, DigitalGlobe, GeoEye',
+  maxZoom: 22,
+  maxNativeZoom: 19,
+  crossOrigin: true,
+}).addTo(map);
+
+// Capa de etiquetas encima
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 22,
+  maxNativeZoom: 19,
+  crossOrigin: true,
+  opacity: 0.7,
+}).addTo(map);
+
+// Ícono de cabaña SVG personalizado
+function cabanIcon(num, tipo) {
+  const esPalapa = tipo === 'palapa';
+  const color = esPalapa ? '#f59e0b' : '#84cc16';
+  const colorDark = esPalapa ? '#92400e' : '#1a2e0e';
+  const colorLight = esPalapa ? '#fcd34d' : '#a3e635';
+
+  const svg = esPalapa
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56">
+        <filter id="s"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.4"/></filter>
+        <g filter="url(#s)">
+          <ellipse cx="24" cy="18" rx="22" ry="10" fill="${colorDark}" stroke="${color}" stroke-width="1.5"/>
+          <ellipse cx="24" cy="14" rx="18" ry="7" fill="${color}" opacity="0.85"/>
+          <ellipse cx="24" cy="11" rx="13" ry="5" fill="${colorLight}" opacity="0.7"/>
+          <rect x="22" y="18" width="4" height="22" fill="${colorDark}" stroke="${color}" stroke-width="1"/>
+          <ellipse cx="24" cy="42" rx="10" ry="3" fill="${colorDark}" opacity="0.5"/>
+        </g>
+        <text x="24" y="16" text-anchor="middle" fill="white" font-size="8" font-weight="bold" font-family="Inter,sans-serif">P</text>
+      </svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="56" viewBox="0 0 48 56">
+        <filter id="s"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.4"/></filter>
+        <g filter="url(#s)">
+          <path d="M24 2 L46 20 L38 20 L38 46 L10 46 L10 20 L2 20 Z" fill="${colorDark}" stroke="${color}" stroke-width="1.5"/>
+          <rect x="14" y="28" width="8" height="10" fill="${color}" rx="1"/>
+          <rect x="26" y="28" width="8" height="18" fill="${color}" rx="1"/>
+          <rect x="14" y="20" width="5" height="5" fill="${colorLight}" rx="0.5"/>
+          <rect x="29" y="20" width="5" height="5" fill="${colorLight}" rx="0.5"/>
+        </g>
+        <circle cx="24" cy="50" r="4" fill="${color}" opacity="0.7"/>
+        <text x="24" y="37" text-anchor="middle" fill="white" font-size="9" font-weight="bold" font-family="Inter,sans-serif">${num}</text>
+      </svg>`;
+
+  return L.divIcon({
+    html: svg,
+    iconSize: [48, 56],
+    iconAnchor: [24, 54],
+    popupAnchor: [0, -54],
+    className: ''
+  });
+}
+
+let seleccionada = null;
+
+cabanas.forEach((c, i) => {
+  const tipo = c.nombre.toLowerCase().includes("palapa") ? "palapa" : "cabana";
+  const marker = L.marker([c.lat, c.lng], { icon: cabanIcon(i+1, tipo) }).addTo(map);
+  marker.on('click', () => mostrar(c));
+});
+
+function mostrar(c) {
+  seleccionada = c;
+  document.getElementById('t-icon').textContent = c.nombre.toLowerCase().includes('palapa') ? '🌴' : '🏠';
+  document.getElementById('t-name').textContent = c.nombre;
+  document.getElementById('t-coord').textContent = `${c.lat}, ${c.lng}`;
+  document.getElementById('t-maps').href = `https://www.google.com/maps?q=${c.lat},${c.lng}`;
+  document.getElementById('tooltip').style.display = 'block';
+}
+
+function cerrar() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+function copiar() {
+  if (!seleccionada) return;
+  navigator.clipboard.writeText(`${seleccionada.lat}, ${seleccionada.lng}`);
+  document.querySelector('.t-btn button').textContent = '✅ Copiado';
+  setTimeout(() => document.querySelector('.t-btn button').textContent = '📋 Copiar coords', 2000);
+}
+
+// Fix: forzar redibujado del mapa
+setTimeout(() => { map.invalidateSize(); }, 300);
+window.addEventListener('resize', () => map.invalidateSize());
+
+// ── Tarjetas ──
+const grid = document.getElementById('grid');
+cabanas.forEach((c, i) => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.onclick = () => {
+    map.setView([c.lat, c.lng], 20);
+    mostrar(c);
+  };
+  card.innerHTML = `
+    <div class="card-head">
+      <div class="card-num">${i+1}</div>
+      <div class="card-name">${c.nombre}</div>
+    </div>
+    <div class="card-lat">Lat: ${c.lat}</div>
+    <div class="card-lng">Lng: ${c.lng}</div>
+  `;
+  grid.appendChild(card);
+});
+</script>
+</body>
+</html>
